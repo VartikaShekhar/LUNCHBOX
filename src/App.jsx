@@ -12,7 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        {/* new restaurant details route */}
+      
         <Route path="/restaurants/:restaurantId" element={<RestaurantPage />} />
       </Routes>
     </HashRouter>
