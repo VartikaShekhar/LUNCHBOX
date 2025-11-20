@@ -2,7 +2,7 @@ import React from "react";
 import { Card, Row, Col, Image, Badge } from "react-bootstrap";
 
 export default function RestaurantItem({ restaurant, onClick }) {
-  const { name, rating, imageUrl, tags = [] } = restaurant;
+  const { name, rating, tags = [] } = restaurant;
 
   return (
     <Card
@@ -12,20 +12,8 @@ export default function RestaurantItem({ restaurant, onClick }) {
     >
       <Card.Body>
         <Row className="align-items-center">
-          {/* Small image */}
-          <Col xs={3} md={2}>
-            {imageUrl && (
-              <Image
-                src={imageUrl}
-                alt={name}
-                thumbnail
-                style={{ width: "100%", objectFit: "cover" }}
-              />
-            )}
-          </Col>
-
           {/* Name, rating, tags */}
-          <Col xs={9} md={7}>
+          <Col xs={12} md={9}>
             <Card.Title className="mb-1">{name}</Card.Title>
             {rating !== undefined && (
               <Card.Text className="mb-1">

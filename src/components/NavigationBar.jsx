@@ -1,37 +1,80 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "react-bootstrap";
-import { InfoCircle } from "react-bootstrap-icons";
+import { Navbar, Nav, Container, Button } from "react-bootstrap";
 
 export default function NavigationBar() {
   const navigate = useNavigate();
 
   return (
-    <div
+    <Navbar
+      expand="lg"
+      className="mb-0"
       style={{
-        padding: "12px 16px",
-        borderBottom: "1px solid #ddd",
-        marginBottom: "16px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        fontSize: "20px",
-        fontWeight: "bold",
+        backgroundColor: "#ff5722",
+        padding: "1rem 0",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
       }}
     >
-      {/* Left side — App Name */}
-      <span style={{ fontSize: "32px", color: "#ff5722" }}>LUNCHHHHHHHHHHH</span>
-
-      {/* Right side — ABOUT button (PUT IT HERE) */}
-      <span>
-        <Button
-          variant="light"
-          onClick={() => navigate("/about")}
-          style={{ border: "none" }}
+      <Container fluid style={{ maxWidth: "100%", padding: "0 2rem" }}>
+        {/* App Name/Logo */}
+        <Navbar.Brand
+          onClick={() => navigate("/")}
+          style={{
+            cursor: "pointer",
+            fontSize: "32px",
+            color: "white",
+            fontWeight: "bold",
+            letterSpacing: "1px"
+          }}
         >
-          <InfoCircle size={22} />
-        </Button>
-      </span>
-    </div>
+          🍱 LUNCHBOX
+        </Navbar.Brand>
+
+        {/* Toggle for mobile */}
+        <Navbar.Toggle aria-controls="basic-navbar-nav" style={{ borderColor: "white" }} />
+
+        {/* Navigation Links */}
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="me-auto ms-4">
+            <Nav.Link
+              onClick={() => navigate("/")}
+              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+            >
+              Home
+            </Nav.Link>
+            <Nav.Link
+              onClick={() => navigate("/about")}
+              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+            >
+              About
+            </Nav.Link>
+          </Nav>
+
+          {/* Right side buttons */}
+          <Nav>
+            <Nav.Link
+              onClick={() => navigate("/login")}
+              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+            >
+              Login/Signup
+            </Nav.Link>
+            <Nav.Link
+              onClick={() => navigate("/profile")}
+              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+            >
+              Profile
+            </Nav.Link>
+            <Button
+              variant="light"
+              onClick={() => alert("Logged out!")}
+              className="ms-2"
+              style={{ fontWeight: "bold" }}
+            >
+              Logout
+            </Button>
+          </Nav>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 }
