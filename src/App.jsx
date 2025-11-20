@@ -1,16 +1,22 @@
-import './App.css'
-import { HashRouter, Routes, Route } from 'react-router'
-import Home from './pages/Home'
-import About from './pages/About'
+// src/App.jsx
+import "./App.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { HashRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import About from "./pages/About";
+import RestaurantPage from "./pages/ResturantPage";
 
 function App() {
-
-  return <HashRouter>
-    <Routes>
-      <Route path="/" element={<Home />}></Route>
-      <Route path="/about" element={<About />}></Route>
-    </Routes>
-  </HashRouter>
+  return (
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        {/* new restaurant details route */}
+        <Route path="/restaurants/:restaurantId" element={<RestaurantPage />} />
+      </Routes>
+    </HashRouter>
+  );
 }
 
-export default App
+export default App;
