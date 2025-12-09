@@ -1,48 +1,57 @@
-import React from "react";
-import { useParams } from "react-router-dom";
-import { Container, Row, Col } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Container, Row, Col, Alert, Button } from "react-bootstrap";
 import NavigationBar from "../components/NavigationBar";
 import RestaurantDetailPanel from "../components/ResturantDetailPanel";
-
-// TEMP dummy data – replace later if your group has real data
-const dummyRestaurants = [
-  {
-    id: 1,
-    name: "Mickies Dairy Bar",
-    rating: 4.6,
-    tags: ["Brunch", "American"],
-    address: "123 Monroe St, Madison, WI",
-    hours: "8:00 AM – 2:00 PM",
-    description: "Classic Madison brunch spot with huge portions. Known for their famous scrambler and friendly service.",
-    image: "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=800&h=600&fit=crop",
-    imageAlt: "Delicious brunch plate with eggs, bacon, and toast at Mickies Dairy Bar"
-  },
-  {
-    id: 2,
-    name: "Village Pizza",
-    rating: 4.3,
-    tags: ["Pizza", "Italian"],
-    address: "456 State St, Madison, WI",
-    hours: "11:00 AM – 10:00 PM",
-    description: "Casual pizza place great for group dinners. Authentic Italian recipes with fresh ingredients.",
-    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=600&fit=crop",
-    imageAlt: "Fresh Italian pizza with melted cheese and basil"
-  },
-];
+import LoadingSpinner from "../components/LoadingSpinner";
+import { supabase } from "../lib/supabase";
 
 export default function RestaurantPage() {
   const { restaurantId } = useParams();
+  const navigate = useNavigate();
+  const [restaurant, setRestaurant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const restaurant = dummyRestaurants.find(
-    (r) => String(r.id) === String(restaurantId)
-  );
+  useEffect(() => {
+    const fetchRestaurant = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('id', restaurantId)
+          .single();
 
-  if (!restaurant) {
+        if (error) throw error;
+        setRestaurant(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRestaurant();
+  }, [restaurantId]);
+
+  if (loading) {
+    return (
+      <>
+        <NavigationBar />
+        <LoadingSpinner message="Loading restaurant..." />
+      </>
+    );
+  }
+
+  if (error || !restaurant) {
     return (
       <>
         <NavigationBar />
         <Container className="py-4">
-          <p>Restaurant not found.</p>
+          <Alert variant="danger">
+            {error || "Restaurant not found."}
+          </Alert>
+          <Button onClick={() => navigate("/")}>Back to Home</Button>
         </Container>
       </>
     );

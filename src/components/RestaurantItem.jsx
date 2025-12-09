@@ -3,13 +3,25 @@ import { Card, Row, Col, Image } from "react-bootstrap";
 import Tag from "./Tag";
 
 export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
-  const { name, rating, tags = [], image, imageAlt } = restaurant;
+  const { name, rating, tags = [], image, imageAlt, image_alt } = restaurant;
+  const altText = imageAlt || image_alt;
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
 
   return (
     <Card
       className="shadow-sm mb-3"
       style={{ cursor: "pointer" }}
       onClick={onClick}
+      onKeyPress={handleKeyPress}
+      tabIndex={0}
+      role="button"
+      aria-label={`View details for ${name}${rating ? `, rated ${rating} out of 5 stars` : ''}`}
     >
       <Card.Body>
         <Row className="align-items-center">
@@ -18,7 +30,7 @@ export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
             <Col xs={12} md={3} className="mb-3 mb-md-0">
               <Image
                 src={image}
-                alt={imageAlt || `Photo of ${name}`}
+                alt={altText || `Photo of ${name}`}
                 rounded
                 fluid
                 style={{ width: "100%", height: "120px", objectFit: "cover" }}

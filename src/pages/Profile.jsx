@@ -171,14 +171,14 @@ export default function Profile() {
             <Row className="mt-3">
               <Col xs={6} md={3}>
                 <div className="text-center">
-                  <h4>{stats.listsCreated}</h4>
-                  <p className="text-muted">Lists Created</p>
+                  <p className="h4 mb-1">{stats.listsCreated}</p>
+                  <p className="text-muted small">Lists Created</p>
                 </div>
               </Col>
               <Col xs={6} md={3}>
                 <div className="text-center">
-                  <h4>{stats.restaurantsAdded}</h4>
-                  <p className="text-muted">Restaurants Added</p>
+                  <p className="h4 mb-1">{stats.restaurantsAdded}</p>
+                  <p className="text-muted small">Restaurants Added</p>
                 </div>
               </Col>
             </Row>
@@ -187,8 +187,12 @@ export default function Profile() {
 
         {/* User's Lists */}
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h4 className="mb-0">My Lists</h4>
-          <Button variant="primary" onClick={() => navigate("/")}>
+          <h3 className="mb-0">My Lists</h3>
+          <Button
+            variant="primary"
+            onClick={() => navigate("/")}
+            aria-label="Create a new restaurant list"
+          >
             + Create New List
           </Button>
         </div>

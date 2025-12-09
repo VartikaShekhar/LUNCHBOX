@@ -17,7 +17,7 @@ export default function NavigationBar() {
       expand="lg"
       className="mb-0"
       style={{
-        backgroundColor: "#ff5722",
+        backgroundColor: "#d84315",
         padding: "1rem 0",
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
       }}

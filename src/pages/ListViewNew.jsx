@@ -150,10 +150,11 @@ export default function ListView() {
 
 
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2>Restaurants</h2>
+                    <h3>Restaurants</h3>
                     <Button
                         variant="primary"
                         onClick={() => user ? setShowAddModal(true) : navigate("/login")}
+                        aria-label="Add a new restaurant to this list"
                     >
                         + Add Restaurant
                     </Button>

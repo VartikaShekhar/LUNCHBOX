@@ -76,6 +76,7 @@ export default function Home() {
           <Button
             variant="primary"
             onClick={() => user ? setShowCreateModal(true) : navigate("/login")}
+            aria-label="Create a new restaurant list"
           >
             + Create New List
           </Button>

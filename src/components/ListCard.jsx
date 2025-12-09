@@ -2,11 +2,22 @@ import React from "react";
 import { Card, Badge } from "react-bootstrap";
 
 export default function ListCard({ title, creator, restaurantCount, onClick }) {
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <Card
       className="shadow-sm mb-3 h-100"
       style={{ cursor: "pointer", transition: "transform 0.2s" }}
       onClick={onClick}
+      onKeyPress={handleKeyPress}
+      tabIndex={0}
+      role="button"
+      aria-label={`View ${title} list created by ${creator} with ${restaurantCount} restaurants`}
       onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
       onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
     >
