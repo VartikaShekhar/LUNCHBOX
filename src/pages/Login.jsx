@@ -10,6 +10,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -24,9 +25,13 @@ export default function Login() {
 
     try {
       if (isSignup) {
-        const { error } = await signUp(email, password, name);
+        const { error } = await signUp(email, password, name, username.trim());
         if (error) throw error;
         setSuccess("Account created! Please check your email to verify your account.");
+        setUsername("");
+        setName("");
+        setEmail("");
+        setPassword("");
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
@@ -66,6 +71,21 @@ export default function Login() {
                     required
                     aria-required="true"
                   />
+                </Form.Group>
+              )}
+              {isSignup && (
+                <Form.Group className="mb-3" controlId="formUsername">
+                  <Form.Label>Username (optional, helps friends find you)</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Choose a username (you can set this later)"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    aria-required="false"
+                  />
+                  <Form.Text className="text-muted">
+                    You can leave this blank and set it after signing up.
+                  </Form.Text>
                 </Form.Group>
               )}
 
@@ -124,4 +144,3 @@ export default function Login() {
     </>
   );
 }
-

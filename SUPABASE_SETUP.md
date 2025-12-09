@@ -125,6 +125,75 @@ $$ LANGUAGE SQL STABLE;
 2. Try to sign up with a new account
 3. Check Supabase dashboard > **Authentication** > **Users** to see if the user was created
 
+## Step 6: Set Up Storage for Image Uploads
+
+1. Go to **Storage** > **Buckets** and create a bucket named `restaurant-images`
+2. Set the bucket to **Public** so uploaded photos can be rendered in the app
+3. Add policies to allow authenticated users to manage their uploads:
+
+```sql
+-- Allow signed-in users to upload images
+create policy "Authenticated users can upload restaurant images"
+  on storage.objects for insert
+  with check (bucket_id = 'restaurant-images' and auth.role() = 'authenticated');
+
+-- Allow users to update/delete their own uploads
+create policy "Users can modify their own restaurant images"
+  on storage.objects for update
+  using (bucket_id = 'restaurant-images' and owner = auth.uid())
+  with check (bucket_id = 'restaurant-images' and owner = auth.uid());
+
+create policy "Users can delete their own restaurant images"
+  on storage.objects for delete
+  using (bucket_id = 'restaurant-images' and owner = auth.uid());
+```
+
+With this bucket in place, the app will automatically upload any image file a user selects when adding a restaurant, and store the public URL in the `restaurants.image` column.
+
+## Step 7: Add Profiles and Friends Tables
+
+Run these SQL snippets in Supabase SQL Editor to support usernames and friends:
+
+```sql
+-- Profiles table to store public user info
+create table profiles (
+  id uuid primary key references auth.users on delete cascade,
+  email text not null unique,
+  username text not null unique,
+  name text,
+  created_at timestamp with time zone default now()
+);
+
+alter table profiles enable row level security;
+
+create policy "Profiles are viewable by everyone"
+  on profiles for select using (true);
+
+create policy "Users can insert their own profile"
+  on profiles for insert with check (auth.uid() = id);
+
+create policy "Users can update their own profile"
+  on profiles for update using (auth.uid() = id);
+
+-- Friends table (one row per connection from user -> friend)
+create table friends (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade,
+  friend_id uuid references auth.users on delete cascade,
+  created_at timestamp with time zone default now()
+);
+
+alter table friends enable row level security;
+
+create policy "Users can view their own friends"
+  on friends for select using (auth.uid() = user_id);
+
+create policy "Users can insert their own friends"
+  on friends for insert with check (auth.uid() = user_id);
+```
+
+After creating these tables, new signups will automatically save `username` and `name` to `profiles`, and the Friends page will be able to search by username/email and add connections.
+
 ## Database Schema Summary
 
 ### `lists` table
@@ -156,4 +225,3 @@ $$ LANGUAGE SQL STABLE;
 - **Can't connect**: Check that your `.env` file has the correct credentials
 - **Can't create data**: Make sure Row Level Security policies are set up correctly
 - **Email not sending**: Check Supabase email settings in Authentication > Email Templates
-

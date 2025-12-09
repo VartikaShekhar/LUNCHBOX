@@ -31,16 +31,35 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email, password, name) => {
+  const signUp = async (email, password, name, username) => {
+    const trimmedUsername = username?.trim() || null;
+    const metadata = { name };
+    if (trimmedUsername) {
+      metadata.username = trimmedUsername;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          name: name,
-        },
+        data: metadata,
       },
     });
+    if (!error && data?.user) {
+      await supabase
+        .from("profiles")
+        .upsert({
+          id: data.user.id,
+          email,
+          name,
+          username: trimmedUsername,
+        })
+        .select()
+        .single()
+        .catch((err) => {
+          console.error("Error saving profile:", err);
+        });
+    }
     return { data, error };
   };
 
@@ -71,4 +90,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

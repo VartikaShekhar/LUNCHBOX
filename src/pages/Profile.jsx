@@ -18,6 +18,9 @@ export default function Profile() {
   const [deletingListId, setDeletingListId] = useState(null);
   const [editFormData, setEditFormData] = useState({ title: "", description: "" });
   const [stats, setStats] = useState({ listsCreated: 0, restaurantsAdded: 0 });
+  const [profile, setProfile] = useState(null);
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameState, setUsernameState] = useState({ loading: false, error: "", success: "" });
 
   // Redirect if not logged in
   useEffect(() => {
@@ -31,6 +34,7 @@ export default function Profile() {
     if (user) {
       fetchUserLists();
       fetchUserStats();
+      fetchProfile();
     }
   }, [user]);
 
@@ -126,6 +130,72 @@ export default function Profile() {
     navigate("/");
   };
 
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      let profileRecord = data;
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      if (!profileRecord) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.name || null,
+            username: user.user_metadata?.username || null,
+          })
+          .select()
+          .single();
+        if (insertError) throw insertError;
+        profileRecord = inserted;
+      }
+
+      setProfile(profileRecord);
+      setUsernameInput(profileRecord?.username || "");
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
+
+  const handleUsernameSave = async (e) => {
+    e.preventDefault();
+    setUsernameState({ loading: true, error: "", success: "" });
+    const trimmed = usernameInput.trim();
+
+    if (!trimmed) {
+      setUsernameState({ loading: false, error: "Username cannot be empty", success: "" });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({ username: trimmed })
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+      setUsernameState({ loading: false, error: "", success: "Username saved!" });
+    } catch (err) {
+      setUsernameState({
+        loading: false,
+        error: err.message || "Could not save username",
+        success: "",
+      });
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -182,6 +252,42 @@ export default function Profile() {
                 </div>
               </Col>
             </Row>
+          </Card.Body>
+        </Card>
+
+        {/* Username Settings */}
+        <Card className="shadow-sm mb-4">
+          <Card.Body>
+            <Card.Title as="h3">Username</Card.Title>
+            <Card.Text className="text-muted">
+              Set a username so friends can find you by username or email.
+            </Card.Text>
+            {usernameState.error && (
+              <Alert variant="danger" dismissible onClose={() => setUsernameState({ ...usernameState, error: "" })}>
+                {usernameState.error}
+              </Alert>
+            )}
+            {usernameState.success && (
+              <Alert variant="success" dismissible onClose={() => setUsernameState({ ...usernameState, success: "" })}>
+                {usernameState.success}
+              </Alert>
+            )}
+            <Form onSubmit={handleUsernameSave}>
+              <Form.Group className="mb-3" controlId="profileUsername">
+                <Form.Label>Choose a username</Form.Label>
+                <Form.Control
+                  type="text"
+                  placeholder="e.g., foodie123"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                />
+              </Form.Group>
+              <div className="d-flex justify-content-end">
+                <Button type="submit" variant="primary" disabled={usernameState.loading}>
+                  {usernameState.loading ? "Saving..." : "Save Username"}
+                </Button>
+              </div>
+            </Form>
           </Card.Body>
         </Card>
 
@@ -310,4 +416,3 @@ export default function Profile() {
     </>
   );
 }
-

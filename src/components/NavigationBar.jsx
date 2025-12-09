@@ -55,6 +55,12 @@ export default function NavigationBar() {
             >
               About
             </Nav.Link>
+            <Nav.Link
+              onClick={() => navigate("/friends")}
+              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+            >
+              Friends
+            </Nav.Link>
           </Nav>
 
           {/* Right side buttons */}

@@ -9,6 +9,7 @@ import ListView from "./pages/ListViewNew";
 import RestaurantPage from "./pages/ResturantPage";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import Friends from "./pages/Friends";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/restaurants/:restaurantId" element={<RestaurantPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/friends" element={<Friends />} />
         </Routes>
       </HashRouter>
     </AuthProvider>

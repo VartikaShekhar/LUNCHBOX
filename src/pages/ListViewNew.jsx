@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useRestaurants } from "../hooks/useRestaurants";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { uploadImageFile } from "../lib/storage";
 
 export default function ListView() {
     const { listId } = useParams();
@@ -27,6 +28,8 @@ export default function ListView() {
         image: "",
         image_alt: ""
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [addError, setAddError] = useState("");
 
     const { restaurants, loading, error, createRestaurant, deleteRestaurant, refetch } = useRestaurants(listId);
@@ -58,6 +61,36 @@ export default function ListView() {
 
         const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
 
+        let imageUrl = formData.image?.trim();
+        const imageAltText = formData.image_alt.trim();
+
+        if (imageFile) {
+            try {
+                setUploadingImage(true);
+                const { data: uploaded, error: uploadError } = await uploadImageFile(
+                    imageFile,
+                    { pathPrefix: user ? `user-${user.id}` : "" }
+                );
+
+                if (uploadError || !uploaded?.publicUrl) {
+                    throw new Error(uploadError || "Could not get uploaded image URL");
+                }
+
+                imageUrl = uploaded.publicUrl;
+            } catch (uploadErr) {
+                setAddError(`Image upload failed: ${uploadErr.message || uploadErr}`);
+                setUploadingImage(false);
+                return;
+            } finally {
+                setUploadingImage(false);
+            }
+        }
+
+        if ((imageFile || imageUrl) && !imageAltText) {
+            setAddError("Please add an image description (alt text) for accessibility.");
+            return;
+        }
+
         const { error } = await createRestaurant({
             name: formData.name,
             description: formData.description,
@@ -65,8 +98,8 @@ export default function ListView() {
             hours: formData.hours,
             rating: formData.rating ? parseFloat(formData.rating) : null,
             tags: tagsArray,
-            image: formData.image || null,
-            image_alt: formData.image_alt || null,
+            image: imageUrl || null,
+            image_alt: imageAltText || null,
             list_id: listId,
             created_by: user.id
         });
@@ -85,6 +118,7 @@ export default function ListView() {
                 image: "",
                 image_alt: ""
             });
+            setImageFile(null);
             refetch();
         }
     };
@@ -296,6 +330,23 @@ export default function ListView() {
                             </Col>
                         </Row>
 
+                        <Form.Group className="mb-3" controlId="restaurantImageFile">
+                            <Form.Label>Upload Image</Form.Label>
+                            <Form.Control
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                            />
+                            <Form.Text className="text-muted">
+                                Choose a photo from your device (optional). We will host it for you.
+                            </Form.Text>
+                            {imageFile && (
+                                <div className="mt-1 text-success small" aria-live="polite">
+                                    Selected: {imageFile.name}
+                                </div>
+                            )}
+                        </Form.Group>
+
                         <Form.Group className="mb-3" controlId="restaurantImage">
                             <Form.Label>Image URL</Form.Label>
                             <Form.Control
@@ -304,6 +355,9 @@ export default function ListView() {
                                 value={formData.image}
                                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                             />
+                            <Form.Text className="text-muted">
+                                Paste a link instead if you do not want to upload a file.
+                            </Form.Text>
                         </Form.Group>
 
                         <Form.Group className="mb-3" controlId="restaurantImageAlt">
@@ -314,14 +368,17 @@ export default function ListView() {
                                 value={formData.image_alt}
                                 onChange={(e) => setFormData({ ...formData, image_alt: e.target.value })}
                             />
+                            <Form.Text className="text-muted">
+                                Required if you upload or link an image; helps screen readers.
+                            </Form.Text>
                         </Form.Group>
 
                         <div className="d-flex justify-content-end gap-2">
                             <Button variant="secondary" onClick={() => setShowAddModal(false)}>
                                 Cancel
                             </Button>
-                            <Button variant="primary" type="submit">
-                                Add Restaurant
+                            <Button variant="primary" type="submit" disabled={uploadingImage}>
+                                {uploadingImage ? "Uploading image..." : "Add Restaurant"}
                             </Button>
                         </div>
                     </Form>
