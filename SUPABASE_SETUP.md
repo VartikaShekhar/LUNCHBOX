@@ -175,21 +175,42 @@ create policy "Users can insert their own profile"
 create policy "Users can update their own profile"
   on profiles for update using (auth.uid() = id);
 
--- Friends table (one row per connection from user -> friend)
-create table friends (
+-- Friend requests table (pending/accepted/declined)
+create table friend_requests (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users on delete cascade,
-  friend_id uuid references auth.users on delete cascade,
+  requester_id uuid references auth.users on delete cascade,
+  addressee_id uuid references auth.users on delete cascade,
+  status text not null default 'pending',
   created_at timestamp with time zone default now()
 );
 
-alter table friends enable row level security;
+alter table friend_requests enable row level security;
 
-create policy "Users can view their own friends"
-  on friends for select using (auth.uid() = user_id);
+create policy "Users can view requests they are part of"
+  on friend_requests for select using (auth.uid() = requester_id or auth.uid() = addressee_id);
 
-create policy "Users can insert their own friends"
-  on friends for insert with check (auth.uid() = user_id);
+create policy "Users can create friend requests"
+  on friend_requests for insert with check (auth.uid() = requester_id);
+
+create policy "Addressee can update their incoming request status"
+  on friend_requests for update using (auth.uid() = addressee_id);
+
+-- Comments table (friends-only commenting enforced in app)
+create table comments (
+  id uuid primary key default gen_random_uuid(),
+  restaurant_id uuid references restaurants on delete cascade,
+  author_id uuid references auth.users on delete cascade,
+  content text not null,
+  created_at timestamp with time zone default now()
+);
+
+alter table comments enable row level security;
+
+create policy "Comments are viewable by everyone"
+  on comments for select using (true);
+
+create policy "Authenticated users can create comments"
+  on comments for insert with check (auth.uid() = author_id);
 ```
 
 After creating these tables, new signups will automatically save `username` and `name` to `profiles`, and the Friends page will be able to search by username/email and add connections.

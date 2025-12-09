@@ -12,6 +12,8 @@ export default function Friends() {
   const [searchBy, setSearchBy] = useState("username");
   const [searchResults, setSearchResults] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [outgoing, setOutgoing] = useState([]);
+  const [incoming, setIncoming] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
@@ -28,10 +30,10 @@ export default function Friends() {
   const fetchFriends = async () => {
     setLoading(true);
     setError("");
-    const { data: friendRows, error } = await supabase
-      .from("friends")
-      .select("id, friend_id, created_at")
-      .eq("user_id", user.id)
+    const { data: requestRows, error } = await supabase
+      .from("friend_requests")
+      .select("*")
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -40,14 +42,35 @@ export default function Friends() {
       return;
     }
 
-    const friendIds = (friendRows || []).map((row) => row.friend_id).filter(Boolean);
+    const accepted = (requestRows || []).filter(
+      (r) => r.status === "accepted"
+    );
+    const outgoingPending = (requestRows || []).filter(
+      (r) => r.status === "pending" && r.requester_id === user.id
+    );
+    const incomingPending = (requestRows || []).filter(
+      (r) => r.status === "pending" && r.addressee_id === user.id
+    );
+
+    const friendIds = accepted.map((row) =>
+      row.requester_id === user.id ? row.addressee_id : row.requester_id
+    );
+
+    const profileIds = [
+      ...new Set([
+        ...friendIds,
+        ...outgoingPending.map((r) => r.addressee_id),
+        ...incomingPending.map((r) => r.requester_id),
+      ]),
+    ].filter(Boolean);
+
     let profileMap = {};
 
-    if (friendIds.length > 0) {
+    if (profileIds.length > 0) {
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, username, name, email")
-        .in("id", friendIds);
+        .in("id", profileIds);
 
       if (profileError) {
         setError(profileError.message);
@@ -58,12 +81,28 @@ export default function Friends() {
       profileMap = Object.fromEntries(profileData.map((p) => [p.id, p]));
     }
 
-    const hydrated = (friendRows || []).map((row) => ({
-      ...row,
-      friend: profileMap[row.friend_id] || null,
-    }));
+    const hydratedFriends = accepted.map((row) => {
+      const friendId = row.requester_id === user.id ? row.addressee_id : row.requester_id;
+      return {
+        ...row,
+        friend: profileMap[friendId] || null,
+      };
+    });
 
-    setFriends(hydrated);
+    setFriends(hydratedFriends);
+    setOutgoing(
+      outgoingPending.map((row) => ({
+        ...row,
+        profile: profileMap[row.addressee_id] || null,
+      }))
+    );
+    setIncoming(
+      incomingPending.map((row) => ({
+        ...row,
+        profile: profileMap[row.requester_id] || null,
+      }))
+    );
+
     setLoading(false);
   };
 
@@ -96,17 +135,33 @@ export default function Friends() {
   const handleAddFriend = async (friendId) => {
     setError("");
     setSuccess("");
-    const { error } = await supabase
-      .from("friends")
-      .insert([{ user_id: user.id, friend_id: friendId }])
+    const { data, error } = await supabase
+      .from("friend_requests")
+      .insert([{ requester_id: user.id, addressee_id: friendId, status: "pending" }])
       .select()
       .single();
 
     if (error) {
       setError(error.message);
     } else {
-      setSuccess("Friend added!");
+      setSuccess("Request sent!");
       setSearchResults((prev) => prev.filter((p) => p.id !== friendId));
+      fetchFriends();
+    }
+  };
+
+  const handleRespond = async (requestId, nextStatus) => {
+    setError("");
+    setSuccess("");
+    const { error } = await supabase
+      .from("friend_requests")
+      .update({ status: nextStatus })
+      .eq("id", requestId);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess(nextStatus === "accepted" ? "Friend request accepted!" : "Friend request declined.");
       fetchFriends();
     }
   };
@@ -180,6 +235,67 @@ export default function Friends() {
             </Card.Body>
           </Card>
         )}
+
+        {/* Incoming Requests */}
+        <Card className="shadow-sm mb-4">
+          <Card.Body>
+            <Card.Title as="h3">Incoming Requests</Card.Title>
+            {loading ? (
+              <p className="text-muted mb-0">Loading...</p>
+            ) : incoming.length === 0 ? (
+              <p className="text-muted mb-0">No incoming requests.</p>
+            ) : (
+              <ListGroup variant="flush">
+                {incoming.map((req) => (
+                  <ListGroup.Item key={req.id} className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-bold">{req.profile?.name || req.profile?.username || "User"}</div>
+                      <div className="text-muted small">
+                        {req.profile?.username ? `@${req.profile?.username}` : "No username set"} · {req.profile?.email}
+                      </div>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <Button size="sm" variant="outline-success" onClick={() => handleRespond(req.id, "accepted")}>
+                        Accept
+                      </Button>
+                      <Button size="sm" variant="outline-danger" onClick={() => handleRespond(req.id, "declined")}>
+                        Decline
+                      </Button>
+                    </div>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Outgoing Requests */}
+        <Card className="shadow-sm mb-4">
+          <Card.Body>
+            <Card.Title as="h3">Outgoing Requests</Card.Title>
+            {loading ? (
+              <p className="text-muted mb-0">Loading...</p>
+            ) : outgoing.length === 0 ? (
+              <p className="text-muted mb-0">No pending requests.</p>
+            ) : (
+              <ListGroup variant="flush">
+                {outgoing.map((req) => (
+                  <ListGroup.Item key={req.id} className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-bold">{req.profile?.name || req.profile?.username || "User"}</div>
+                      <div className="text-muted small">
+                        {req.profile?.username ? `@${req.profile?.username}` : "No username set"} · {req.profile?.email}
+                      </div>
+                    </div>
+                    <Badge bg="warning" text="dark">
+                      Pending
+                    </Badge>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            )}
+          </Card.Body>
+        </Card>
 
         <Card className="shadow-sm">
           <Card.Body>
