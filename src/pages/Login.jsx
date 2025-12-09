@@ -1,16 +1,43 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Form, Button, Card } from "react-bootstrap";
+import { Container, Form, Button, Card, Alert } from "react-bootstrap";
+import { useAuth } from "../context/AuthContext";
 import NavigationBar from "../components/NavigationBar";
 
 export default function Login() {
   const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e) => {
+  const { signIn, signUp } = useAuth();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert(isSignup ? "Signup successful!" : "Login successful!");
-    navigate("/");
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      if (isSignup) {
+        const { error } = await signUp(email, password, name);
+        if (error) throw error;
+        setSuccess("Account created! Please check your email to verify your account.");
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) throw error;
+        setSuccess("Login successful!");
+        setTimeout(() => navigate("/profile"), 1000);
+      }
+    } catch (err) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,26 +51,59 @@ export default function Login() {
               {isSignup ? "Sign Up" : "Login"}
             </Card.Title>
 
+            {error && <Alert variant="danger">{error}</Alert>}
+            {success && <Alert variant="success">{success}</Alert>}
+
             <Form onSubmit={handleSubmit}>
               {isSignup && (
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="formName">
                   <Form.Label>Name</Form.Label>
-                  <Form.Control type="text" placeholder="Enter your name" />
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    aria-required="true"
+                  />
                 </Form.Group>
               )}
 
-              <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control type="email" placeholder="Enter email" />
+              <Form.Group className="mb-3" controlId="formEmail">
+                <Form.Label>Email address</Form.Label>
+                <Form.Control
+                  type="email"
+                  placeholder="Enter email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  aria-required="true"
+                />
               </Form.Group>
 
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" controlId="formPassword">
                 <Form.Label>Password</Form.Label>
-                <Form.Control type="password" placeholder="Password" />
+                <Form.Control
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  aria-required="true"
+                  minLength={6}
+                />
+                <Form.Text className="text-muted">
+                  Password must be at least 6 characters long.
+                </Form.Text>
               </Form.Group>
 
-              <Button variant="primary" type="submit" className="w-100 mb-3">
-                {isSignup ? "Sign Up" : "Login"}
+              <Button
+                variant="primary"
+                type="submit"
+                className="w-100 mb-3"
+                disabled={loading}
+              >
+                {loading ? "Loading..." : (isSignup ? "Sign Up" : "Login")}
               </Button>
 
               <div className="text-center">

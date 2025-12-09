@@ -1,9 +1,16 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar, Nav, Container, Button } from "react-bootstrap";
+import { useAuth } from "../context/AuthContext";
 
 export default function NavigationBar() {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <Navbar
@@ -52,26 +59,31 @@ export default function NavigationBar() {
 
           {/* Right side buttons */}
           <Nav>
-            <Nav.Link
-              onClick={() => navigate("/login")}
-              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
-            >
-              Login/Signup
-            </Nav.Link>
-            <Nav.Link
-              onClick={() => navigate("/profile")}
-              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
-            >
-              Profile
-            </Nav.Link>
-            <Button
-              variant="light"
-              onClick={() => alert("Logged out!")}
-              className="ms-2"
-              style={{ fontWeight: "bold" }}
-            >
-              Logout
-            </Button>
+            {user ? (
+              <>
+                <Nav.Link
+                  onClick={() => navigate("/profile")}
+                  style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+                >
+                  Profile
+                </Nav.Link>
+                <Button
+                  variant="light"
+                  onClick={handleLogout}
+                  className="ms-2"
+                  style={{ fontWeight: "bold" }}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Nav.Link
+                onClick={() => navigate("/login")}
+                style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+              >
+                Login/Signup
+              </Nav.Link>
+            )}
           </Nav>
         </Navbar.Collapse>
       </Container>

@@ -1,8 +1,9 @@
 import React from "react";
-import { Card, Row, Col, Image, Badge } from "react-bootstrap";
+import { Card, Row, Col, Image } from "react-bootstrap";
+import Tag from "./Tag";
 
-export default function RestaurantItem({ restaurant, onClick }) {
-  const { name, rating, tags = [] } = restaurant;
+export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
+  const { name, rating, tags = [], image, imageAlt } = restaurant;
 
   return (
     <Card
@@ -12,19 +13,34 @@ export default function RestaurantItem({ restaurant, onClick }) {
     >
       <Card.Body>
         <Row className="align-items-center">
+          {/* Restaurant Image */}
+          {image && (
+            <Col xs={12} md={3} className="mb-3 mb-md-0">
+              <Image
+                src={image}
+                alt={imageAlt || `Photo of ${name}`}
+                rounded
+                fluid
+                style={{ width: "100%", height: "120px", objectFit: "cover" }}
+              />
+            </Col>
+          )}
+
           {/* Name, rating, tags */}
-          <Col xs={12} md={9}>
+          <Col xs={12} md={image ? 6 : 9}>
             <Card.Title className="mb-1">{name}</Card.Title>
             {rating !== undefined && (
               <Card.Text className="mb-1">
                 ⭐ <strong>{rating}</strong>/5
               </Card.Text>
             )}
-            <div>
+            <div onClick={(e) => e.stopPropagation()}>
               {tags.map((tag) => (
-                <Badge key={tag} bg="secondary" className="me-1">
-                  {tag}
-                </Badge>
+                <Tag
+                  key={tag}
+                  label={tag}
+                  onClick={onTagClick ? () => onTagClick(tag) : undefined}
+                />
               ))}
             </div>
           </Col>
