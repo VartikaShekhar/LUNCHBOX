@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+const normalizeTags = (tags) => {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+  }
+  return [];
+};
+
 export const useRestaurants = (listId = null) => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +27,11 @@ export const useRestaurants = (listId = null) => {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRestaurants(data || []);
+      const normalized = (data || []).map((item) => ({
+        ...item,
+        tags: normalizeTags(item.tags),
+      }));
+      setRestaurants(normalized);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching restaurants:', err);
@@ -41,7 +53,8 @@ export const useRestaurants = (listId = null) => {
         .single();
 
       if (error) throw error;
-      setRestaurants([data, ...restaurants]);
+      const normalized = { ...data, tags: normalizeTags(data.tags) };
+      setRestaurants([normalized, ...restaurants]);
       return { data, error: null };
     } catch (err) {
       console.error('Error creating restaurant:', err);
@@ -59,7 +72,8 @@ export const useRestaurants = (listId = null) => {
         .single();
 
       if (error) throw error;
-      setRestaurants(restaurants.map(r => r.id === id ? data : r));
+      const normalized = { ...data, tags: normalizeTags(data.tags) };
+      setRestaurants(restaurants.map(r => r.id === id ? normalized : r));
       return { data, error: null };
     } catch (err) {
       console.error('Error updating restaurant:', err);
@@ -93,4 +107,3 @@ export const useRestaurants = (listId = null) => {
     refetch: fetchRestaurants,
   };
 };
-

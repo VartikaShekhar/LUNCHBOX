@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, hasSupabaseConfig } from '../lib/supabase';
 
 const AuthContext = createContext({});
 
@@ -14,10 +14,22 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
 
   useEffect(() => {
+    if (!hasSupabaseConfig) {
+      setAuthError("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.");
+      setLoading(false);
+      return;
+    }
+
     // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        setAuthError(error.message || "Unable to load session.");
+      } else {
+        setAuthError("");
+      }
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -32,6 +44,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signUp = async (email, password, name, username) => {
+    if (!hasSupabaseConfig) {
+      return { data: null, error: new Error("Supabase credentials are missing. Update your .env file to enable signup.") };
+    }
+
     const trimmedUsername = username?.trim() || null;
     const metadata = { name };
     if (trimmedUsername) {
@@ -64,6 +80,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signIn = async (email, password) => {
+    if (!hasSupabaseConfig) {
+      return { data: null, error: new Error("Supabase credentials are missing. Update your .env file to enable login.") };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -79,6 +99,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    authError,
     signUp,
     signIn,
     signOut,

@@ -45,6 +45,12 @@ export default function RestaurantPage() {
     fetchComments();
   }, [restaurantId, user]);
 
+  useEffect(() => {
+    if (!user) {
+      setIsFriend(false);
+    }
+  }, [user]);
+
   const checkFriendStatus = async (viewerId, ownerId) => {
     const { data, error } = await supabase
       .from("friend_requests")
@@ -61,15 +67,37 @@ export default function RestaurantPage() {
   };
 
   const fetchComments = async () => {
+    // Fetch comments first
     const { data, error } = await supabase
       .from("comments")
-      .select("id, content, created_at, author_id, author:author_id (username, name, email)")
+      .select("id, content, created_at, author_id")
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false });
 
-    if (!error) {
-      setComments(data || []);
+    if (error) {
+      setCommentError(error.message || "Unable to load comments.");
+      return;
     }
+
+    const commentRows = data || [];
+    const authorIds = [...new Set(commentRows.map((c) => c.author_id).filter(Boolean))];
+
+    let profilesMap = {};
+    if (authorIds.length) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, name, email")
+        .in("id", authorIds);
+      profilesMap = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
+    }
+
+    const hydrated = commentRows.map((c) => ({
+      ...c,
+      author: profilesMap[c.author_id] || null,
+    }));
+
+    setComments(hydrated);
+    setCommentError("");
   };
 
   const handleAddComment = async (e) => {
@@ -92,7 +120,7 @@ export default function RestaurantPage() {
     }
 
     setCommentLoading(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("comments")
       .insert([
         {
@@ -100,15 +128,32 @@ export default function RestaurantPage() {
           author_id: user.id,
           content: commentText.trim(),
         },
-      ]);
+      ])
+      .select("id, content, created_at, author_id")
+      .single();
 
     if (error) {
       setCommentError(error.message);
-    } else {
+    } else if (data) {
+      const hydrated = {
+        ...data,
+        author: {
+          username: user.user_metadata?.username || null,
+          name: user.user_metadata?.name || null,
+          email: user.email,
+        },
+      };
+      setComments((prev) => [hydrated, ...(prev || [])]);
       setCommentText("");
-      fetchComments();
+      setCommentError("");
     }
     setCommentLoading(false);
+  };
+
+  const handleTagNavigate = (tag) => {
+    if (restaurant?.list_id) {
+      navigate(`/lists/${restaurant.list_id}?tag=${encodeURIComponent(tag)}`);
+    }
   };
 
   if (loading) {
@@ -139,9 +184,12 @@ export default function RestaurantPage() {
       <NavigationBar />
 
       <Container className="py-4">
+        {commentError && !comments.length && (
+          <Alert variant="danger">{commentError}</Alert>
+        )}
         <Row>
           <Col md={12}>
-            <RestaurantDetailPanel restaurant={restaurant} />
+            <RestaurantDetailPanel restaurant={restaurant} onTagClick={handleTagNavigate} />
           </Col>
         </Row>
         <Row className="mt-4">
@@ -166,6 +214,14 @@ export default function RestaurantPage() {
             <div className="mt-3">
               <h5>Add a comment</h5>
               {commentError && <Alert variant="danger">{commentError}</Alert>}
+              {!user && (
+                <Alert variant="info">Log in to comment.</Alert>
+              )}
+              {user && !isFriend && user?.id !== restaurant?.created_by && (
+                <Alert variant="warning">
+                  Only the list owner and their accepted friends can comment on this restaurant.
+                </Alert>
+              )}
               <form onSubmit={handleAddComment}>
                 <textarea
                   className="form-control mb-2"

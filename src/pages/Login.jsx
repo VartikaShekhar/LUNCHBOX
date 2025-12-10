@@ -15,15 +15,19 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, authError } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(authError || "");
     setSuccess("");
     setLoading(true);
 
     try {
+      if (authError) {
+        throw new Error(authError);
+      }
+
       if (isSignup) {
         const { error } = await signUp(email, password, name, username.trim());
         if (error) throw error;
@@ -56,7 +60,7 @@ export default function Login() {
               {isSignup ? "Sign Up" : "Login"}
             </Card.Title>
 
-            {error && <Alert variant="danger">{error}</Alert>}
+            {(error || authError) && <Alert variant="danger">{error || authError}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
             <Form onSubmit={handleSubmit}>
@@ -121,7 +125,7 @@ export default function Login() {
                 variant="primary"
                 type="submit"
                 className="w-100 mb-3"
-                disabled={loading}
+                disabled={loading || Boolean(authError)}
               >
                 {loading ? "Loading..." : (isSignup ? "Sign Up" : "Login")}
               </Button>

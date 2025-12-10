@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Container, Row, Col, Form, Alert, Button, Modal } from "react-bootstrap";
 import NavigationBar from "../components/NavigationBar";
 import RestaurantItem from "../components/RestaurantItem";
 import ListHeader from "../components/ListHeader";
 import LoadingSpinner from "../components/LoadingSpinner";
+import Tag from "../components/Tag";
 import { useRestaurants } from "../hooks/useRestaurants";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -13,8 +14,11 @@ import { uploadImageFile } from "../lib/storage";
 export default function ListView() {
     const { listId } = useParams();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [selectedTag, setSelectedTag] = useState(null);
     const [sortBy, setSortBy] = useState("rating");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [minRating, setMinRating] = useState("any");
     const [listInfo, setListInfo] = useState(null);
     const [loadingList, setLoadingList] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -50,6 +54,11 @@ export default function ListView() {
         fetchListInfo();
     }, [listId]);
 
+    useEffect(() => {
+        const tagFromUrl = searchParams.get("tag");
+        setSelectedTag(tagFromUrl || null);
+    }, [searchParams]);
+
     const handleAddRestaurant = async (e) => {
         e.preventDefault();
         setAddError("");
@@ -65,6 +74,12 @@ export default function ListView() {
         const imageAltText = formData.image_alt.trim();
 
         if (imageFile) {
+            const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+            const ext = imageFile.name?.split(".").pop()?.toLowerCase();
+            if (!allowedTypes.includes(imageFile.type) && !["jpg", "jpeg", "png"].includes(ext)) {
+                setAddError("Please upload a JPG or PNG image.");
+                return;
+            }
             try {
                 setUploadingImage(true);
                 const { data: uploaded, error: uploadError } = await uploadImageFile(
@@ -124,7 +139,15 @@ export default function ListView() {
     };
 
     const handleTagClick = (tag) => {
-        setSelectedTag(selectedTag === tag ? null : tag);
+        const nextTag = selectedTag === tag ? null : tag;
+        setSelectedTag(nextTag);
+        const params = new URLSearchParams(searchParams);
+        if (nextTag) {
+            params.set("tag", nextTag);
+        } else {
+            params.delete("tag");
+        }
+        setSearchParams(params);
     };
 
     const handleDeleteRestaurant = async (id) => {
@@ -134,18 +157,37 @@ export default function ListView() {
         }
     };
 
-    // Filter and sort restaurants
-    let filteredRestaurants = restaurants;
+    const clearFilters = () => {
+        setSelectedTag(null);
+        setSearchTerm("");
+        setMinRating("any");
+        setSortBy("rating");
+        setSearchParams({});
+    };
 
-    if (selectedTag) {
-        filteredRestaurants = filteredRestaurants.filter(r =>
-            r.tags && r.tags.includes(selectedTag)
-        );
-    }
+    const availableTags = Array.from(
+        new Set(
+            (restaurants || []).flatMap((restaurant) => restaurant.tags || [])
+        )
+    );
+
+    // Filter and sort restaurants
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    let filteredRestaurants = restaurants.filter((restaurant) => {
+        const matchesTag = selectedTag ? (restaurant.tags || []).includes(selectedTag) : true;
+        const matchesSearch = !normalizedSearch
+            ? true
+            : (restaurant.name?.toLowerCase().includes(normalizedSearch)) ||
+              (restaurant.description?.toLowerCase().includes(normalizedSearch)) ||
+              (restaurant.tags || []).some((tag) => tag.toLowerCase().includes(normalizedSearch));
+        const meetsRating = minRating === "any" ? true : (restaurant.rating || 0) >= Number(minRating);
+        return matchesTag && matchesSearch && meetsRating;
+    });
 
     filteredRestaurants = [...filteredRestaurants].sort((a, b) => {
         if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
         if (sortBy === "name") return a.name.localeCompare(b.name);
+        if (sortBy === "newest") return new Date(b.created_at) - new Date(a.created_at);
         return 0;
     });
 
@@ -181,8 +223,6 @@ export default function ListView() {
 
                 {error && <Alert variant="danger">{error}</Alert>}
 
-
-
                 <div className="d-flex justify-content-between align-items-center mb-3">
                     <h3>Restaurants</h3>
                     <Button
@@ -194,32 +234,73 @@ export default function ListView() {
                     </Button>
                 </div>
 
-                {selectedTag && (
-                    <Alert variant="info" dismissible onClose={() => setSelectedTag(null)}>
-                        Filtering by tag: <strong>{selectedTag}</strong>
-                    </Alert>
-                )}
-
-                {/* Sort Controls */}
-                <Row className="mb-3">
-                    <Col md={4}>
+                {/* Filter & Sort Controls */}
+                <Row className="g-3 mb-3">
+                    <Col xs={12} md={6}>
+                        <Form.Control
+                            type="search"
+                            placeholder="Search by name, description, or tag..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            aria-label="Search restaurants"
+                        />
+                    </Col>
+                    <Col xs={6} md={3}>
+                        <Form.Select
+                            value={minRating}
+                            onChange={(e) => setMinRating(e.target.value)}
+                            aria-label="Filter by minimum rating"
+                        >
+                            <option value="any">Any rating</option>
+                            <option value="3">3.0+ stars</option>
+                            <option value="4">4.0+ stars</option>
+                            <option value="4.5">4.5+ stars</option>
+                        </Form.Select>
+                    </Col>
+                    <Col xs={6} md={3}>
                         <Form.Select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                             aria-label="Sort restaurants by"
                         >
                             <option value="rating">Highest Rating</option>
+                            <option value="newest">Newest Added</option>
                             <option value="name">Name (A-Z)</option>
                         </Form.Select>
                     </Col>
                 </Row>
+
+                {availableTags.length > 0 && (
+                    <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <span className="fw-semibold">Filter by tag:</span>
+                        {availableTags.map((tag) => (
+                            <Tag
+                                key={tag}
+                                label={tag}
+                                variant={selectedTag === tag ? "primary" : "secondary"}
+                                onClick={() => handleTagClick(tag)}
+                            />
+                        ))}
+                        {(selectedTag || searchTerm || minRating !== "any" || sortBy !== "rating") && (
+                            <Button variant="outline-secondary" size="sm" onClick={clearFilters}>
+                                Clear filters
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {selectedTag && (
+                    <Alert variant="info" dismissible onClose={() => setSelectedTag(null)}>
+                        Filtering by tag: <strong>{selectedTag}</strong>
+                    </Alert>
+                )}
 
                 {/* Restaurants List */}
                 {filteredRestaurants.length === 0 ? (
                     <Alert variant="info">
                         {restaurants.length === 0
                             ? "No restaurants in this list yet. Add the first one!"
-                            : "No restaurants match the selected tag."}
+                            : "No restaurants match the current filters. Try clearing them."}
                     </Alert>
                 ) : (
                     filteredRestaurants.map(restaurant => (

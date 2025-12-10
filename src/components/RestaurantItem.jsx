@@ -2,9 +2,21 @@ import React from "react";
 import { Card, Row, Col, Image } from "react-bootstrap";
 import Tag from "./Tag";
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1200&q=80";
+
+const normalizeTags = (tags) => {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+  }
+  return [];
+};
+
 export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
   const { name, rating, tags = [], image, imageAlt, image_alt } = restaurant;
   const altText = imageAlt || image_alt;
+  const normalizedTags = normalizeTags(tags);
+  const imageSrc = image || FALLBACK_IMAGE;
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -15,7 +27,7 @@ export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
 
   return (
     <Card
-      className="shadow-sm mb-3"
+      className="shadow-sm mb-3 restaurant-card"
       style={{ cursor: "pointer" }}
       onClick={onClick}
       onKeyPress={handleKeyPress}
@@ -26,20 +38,18 @@ export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
       <Card.Body>
         <Row className="align-items-center">
           {/* Restaurant Image */}
-          {image && (
-            <Col xs={12} md={3} className="mb-3 mb-md-0">
-              <Image
-                src={image}
-                alt={altText || `Photo of ${name}`}
-                rounded
-                fluid
-                style={{ width: "100%", height: "120px", objectFit: "cover" }}
-              />
-            </Col>
-          )}
+          <Col xs={12} md={3} className="mb-3 mb-md-0">
+            <Image
+              src={imageSrc}
+              alt={altText || `Photo of ${name}`}
+              rounded
+              fluid
+              style={{ width: "100%", height: "120px", objectFit: "cover" }}
+            />
+          </Col>
 
           {/* Name, rating, tags */}
-          <Col xs={12} md={image ? 6 : 9}>
+          <Col xs={12} md={6}>
             <Card.Title className="mb-1">{name}</Card.Title>
             {rating !== undefined && (
               <Card.Text className="mb-1">
@@ -47,7 +57,7 @@ export default function RestaurantItem({ restaurant, onClick, onTagClick }) {
               </Card.Text>
             )}
             <div onClick={(e) => e.stopPropagation()}>
-              {tags.map((tag) => (
+              {normalizedTags.map((tag) => (
                 <Tag
                   key={tag}
                   label={tag}

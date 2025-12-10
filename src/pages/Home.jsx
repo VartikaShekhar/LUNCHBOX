@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { Container, Row, Col, Form, Button, Modal, Alert } from "react-bootstrap";
 import NavigationBar from "../components/NavigationBar";
@@ -8,6 +8,7 @@ import { useLists } from "../hooks/useLists";
 import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
+  const heroImage = "https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=1400&q=80";
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("recent");
@@ -67,13 +68,36 @@ export default function Home() {
   }
 
   return (
-    <>
-      <NavigationBar />
+      <>
+        <NavigationBar />
 
-      <Container className="py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1 className="mb-0">Discover Restaurant Lists</h1>
-          <Button
+        <Container className="py-4">
+          <div className="hero mb-4">
+            <div>
+              <p className="text-uppercase text-muted mb-1" style={{ letterSpacing: "0.08em", fontWeight: 600 }}>
+                Your next meal starts here
+              </p>
+              <h1 className="mb-2">Find and share the best spots in town</h1>
+              <p className="mb-3">
+                Browse curated restaurant lists from friends, save your own picks, and never forget that perfect brunch place again.
+              </p>
+              <div className="d-flex gap-2">
+                <Button variant="primary" onClick={() => user ? setShowCreateModal(true) : navigate("/login")}>
+                  Create a list
+                </Button>
+                <Button variant="outline-secondary" onClick={() => navigate("/about")}>
+                  Learn more
+                </Button>
+              </div>
+            </div>
+            <div>
+              <img src={heroImage} alt="Table with shared dishes" />
+            </div>
+          </div>
+
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h1 className="mb-0">Discover Restaurant Lists</h1>
+            <Button
             variant="primary"
             onClick={() => user ? setShowCreateModal(true) : navigate("/login")}
             aria-label="Create a new restaurant list"

@@ -1,20 +1,30 @@
 import React from "react";
-import { Card, Button, Image } from "react-bootstrap";
+import { Card, Image } from "react-bootstrap";
 import Tag from "./Tag";
 
-export default function RestaurantDetailPanel({ restaurant }) {
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=1500&q=80";
+
+const normalizeTags = (tags) => {
+    if (Array.isArray(tags)) return tags;
+    if (typeof tags === "string") {
+        return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+    }
+    return [];
+};
+
+export default function RestaurantDetailPanel({ restaurant, onTagClick }) {
     const { name, rating, tags = [], address, hours, description, image, imageAlt, image_alt } = restaurant;
     const altText = imageAlt || image_alt;
+    const normalizedTags = normalizeTags(tags);
+    const imageSrc = image || FALLBACK_IMAGE;
 
     return (
         <Card className="shadow-sm mb-3">
-            {image && (
-                <Image
-                    src={image}
-                    alt={altText || `Photo of ${name}`}
-                    style={{ width: "100%", height: "300px", objectFit: "cover" }}
-                />
-            )}
+            <Image
+                src={imageSrc}
+                alt={altText || `Photo of ${name}`}
+                style={{ width: "100%", height: "300px", objectFit: "cover" }}
+            />
             <Card.Body>
                 <h1 className="mb-3">{name}</h1>
 
@@ -26,11 +36,18 @@ export default function RestaurantDetailPanel({ restaurant }) {
                     </p>
                 )}
 
-                <div className="mb-3">
-                    {tags.map((tag) => (
-                        <Tag key={tag} label={tag} variant="secondary" />
-                    ))}
-                </div>
+                {normalizedTags.length > 0 && (
+                    <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                        {normalizedTags.map((tag) => (
+                            <Tag
+                                key={tag}
+                                label={tag}
+                                variant="secondary"
+                                onClick={onTagClick ? () => onTagClick(tag) : undefined}
+                            />
+                        ))}
+                    </div>
+                )}
 
                 {address && (
                     <Card.Text className="mb-2">
