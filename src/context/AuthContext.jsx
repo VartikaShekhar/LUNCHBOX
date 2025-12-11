@@ -62,19 +62,20 @@ export const AuthProvider = ({ children }) => {
       },
     });
     if (!error && data?.user) {
-      await supabase
-        .from("profiles")
-        .upsert({
-          id: data.user.id,
-          email,
-          name,
-          username: trimmedUsername,
-        })
-        .select()
-        .single()
-        .catch((err) => {
-          console.error("Error saving profile:", err);
-        });
+      try {
+        await supabase
+          .from("profiles")
+          .upsert({
+            id: data.user.id,
+            email,
+            name,
+            username: trimmedUsername,
+          })
+          .select()
+          .single();
+      } catch (profileErr) {
+        console.error("Error saving profile:", profileErr);
+      }
     }
     return { data, error };
   };

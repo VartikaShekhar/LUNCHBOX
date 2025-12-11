@@ -138,7 +138,7 @@ export default function Home() {
               <ListCard
                 title={list.title}
                 creator={list.creator_name || "Anonymous"}
-                restaurantCount={0}
+                restaurantCount={list.restaurant_count || 0}
                 onClick={() => navigate(`/lists/${list.id}`)}
               />
             </Col>

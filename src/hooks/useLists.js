@@ -15,7 +15,31 @@ export const useLists = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLists(data || []);
+
+      const listRows = data || [];
+      const listIds = listRows.map((l) => l.id).filter(Boolean);
+      let counts = {};
+
+      if (listIds.length) {
+        const { data: restaurantRows, error: restaurantError } = await supabase
+          .from('restaurants')
+          .select('id, list_id')
+          .in('list_id', listIds);
+
+        if (!restaurantError && restaurantRows) {
+          counts = restaurantRows.reduce((acc, row) => {
+            acc[row.list_id] = (acc[row.list_id] || 0) + 1;
+            return acc;
+          }, {});
+        }
+      }
+
+      const hydratedLists = listRows.map((list) => ({
+        ...list,
+        restaurant_count: counts[list.id] || 0,
+      }));
+
+      setLists(hydratedLists);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching lists:', err);
@@ -37,7 +61,7 @@ export const useLists = () => {
         .single();
 
       if (error) throw error;
-      setLists([data, ...lists]);
+      setLists([{ ...data, restaurant_count: 0 }, ...lists]);
       return { data, error: null };
     } catch (err) {
       console.error('Error creating list:', err);
@@ -89,4 +113,3 @@ export const useLists = () => {
     refetch: fetchLists,
   };
 };
-

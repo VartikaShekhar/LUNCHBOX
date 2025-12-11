@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Card, Form, Button, Alert, ListGroup, Badge, Row, Col } from "react-bootstrap";
+import { Container, Card, Form, Button, Alert, ListGroup, Badge, Row, Col, Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { useAuth } from "../context/AuthContext";
@@ -18,6 +18,8 @@ export default function Friends() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -166,6 +168,32 @@ export default function Friends() {
     }
   };
 
+  const openProfile = (profile) => {
+    if (!profile) return;
+    setSelectedProfile(profile);
+    setShowProfileModal(true);
+  };
+
+  const ProfileDisplay = ({ profile }) => (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => openProfile(profile)}
+      onKeyPress={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openProfile(profile);
+        }
+      }}
+      style={{ cursor: "pointer" }}
+    >
+      <div className="fw-bold">{profile?.name || profile?.username || "User"}</div>
+      <div className="text-muted small">
+        {profile?.username ? `@${profile?.username}` : "No username set"} · {profile?.email}
+      </div>
+    </div>
+  );
+
   if (!user) {
     return null;
   }
@@ -220,12 +248,7 @@ export default function Friends() {
               <ListGroup variant="flush">
                 {searchResults.map((profile) => (
                   <ListGroup.Item key={profile.id} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-bold">{profile.name || profile.username || "User"}</div>
-                      <div className="text-muted small">
-                        {profile.username ? `@${profile.username}` : "No username set"} · {profile.email}
-                      </div>
-                    </div>
+                    <ProfileDisplay profile={profile} />
                     <Button size="sm" onClick={() => handleAddFriend(profile.id)}>
                       Add Friend
                     </Button>
@@ -248,12 +271,7 @@ export default function Friends() {
               <ListGroup variant="flush">
                 {incoming.map((req) => (
                   <ListGroup.Item key={req.id} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-bold">{req.profile?.name || req.profile?.username || "User"}</div>
-                      <div className="text-muted small">
-                        {req.profile?.username ? `@${req.profile?.username}` : "No username set"} · {req.profile?.email}
-                      </div>
-                    </div>
+                    <ProfileDisplay profile={req.profile} />
                     <div className="d-flex gap-2">
                       <Button size="sm" variant="outline-success" onClick={() => handleRespond(req.id, "accepted")}>
                         Accept
@@ -281,12 +299,7 @@ export default function Friends() {
               <ListGroup variant="flush">
                 {outgoing.map((req) => (
                   <ListGroup.Item key={req.id} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-bold">{req.profile?.name || req.profile?.username || "User"}</div>
-                      <div className="text-muted small">
-                        {req.profile?.username ? `@${req.profile?.username}` : "No username set"} · {req.profile?.email}
-                      </div>
-                    </div>
+                    <ProfileDisplay profile={req.profile} />
                     <Badge bg="warning" text="dark">
                       Pending
                     </Badge>
@@ -308,12 +321,7 @@ export default function Friends() {
               <ListGroup variant="flush">
                 {friends.map((f) => (
                   <ListGroup.Item key={f.id} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-bold">{f.friend?.name || f.friend?.username || "User"}</div>
-                      <div className="text-muted small">
-                        {f.friend?.username ? `@${f.friend?.username}` : "No username set"} · {f.friend?.email}
-                      </div>
-                    </div>
+                    <ProfileDisplay profile={f.friend} />
                     <Badge bg="light" text="dark">
                       Added
                     </Badge>
@@ -324,6 +332,29 @@ export default function Friends() {
           </Card.Body>
         </Card>
       </Container>
+
+      {/* Profile Modal */}
+      <Modal show={showProfileModal} onHide={() => setShowProfileModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>User Profile</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedProfile ? (
+            <>
+              <p className="mb-1"><strong>Name:</strong> {selectedProfile.name || "User"}</p>
+              <p className="mb-1"><strong>Username:</strong> {selectedProfile.username ? `@${selectedProfile.username}` : "Not set"}</p>
+              <p className="mb-0"><strong>Email:</strong> {selectedProfile.email}</p>
+            </>
+          ) : (
+            <p>Unable to load profile.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowProfileModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

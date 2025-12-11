@@ -67,6 +67,10 @@ export default function ListView() {
             setAddError("Please login to add restaurants");
             return;
         }
+        if (!isOwner) {
+            setAddError("Only the list owner can add restaurants to this list.");
+            return;
+        }
 
         const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
 
@@ -98,6 +102,16 @@ export default function ListView() {
                 return;
             } finally {
                 setUploadingImage(false);
+            }
+        }
+
+        if (!imageFile && imageUrl) {
+            const lowerUrl = imageUrl.toLowerCase();
+            const allowedExtensions = [".jpg", ".jpeg", ".png"];
+            const isAllowedUrl = allowedExtensions.some((ext) => lowerUrl.endsWith(ext));
+            if (!isAllowedUrl) {
+                setAddError("Image URL must be a JPG or PNG.");
+                return;
             }
         }
 
@@ -191,6 +205,8 @@ export default function ListView() {
         return 0;
     });
 
+    const isOwner = user && listInfo && listInfo.creator_id === user.id;
+
     if (loadingList || loading) {
         return (
             <>
@@ -227,12 +243,26 @@ export default function ListView() {
                     <h3>Restaurants</h3>
                     <Button
                         variant="primary"
-                        onClick={() => user ? setShowAddModal(true) : navigate("/login")}
+                        onClick={() => {
+                            if (!user) return navigate("/login");
+                            if (!isOwner) {
+                                setAddError("Only the list owner can add restaurants to this list.");
+                                return;
+                            }
+                            setShowAddModal(true);
+                        }}
                         aria-label="Add a new restaurant to this list"
+                        disabled={!user || !isOwner}
                     >
                         + Add Restaurant
                     </Button>
                 </div>
+                {!user && (
+                    <Alert variant="info">Sign in as the list owner to add restaurants.</Alert>
+                )}
+                {user && !isOwner && (
+                    <Alert variant="warning">Only the list owner can add restaurants to this list.</Alert>
+                )}
 
                 {/* Filter & Sort Controls */}
                 <Row className="g-3 mb-3">
@@ -415,11 +445,11 @@ export default function ListView() {
                             <Form.Label>Upload Image</Form.Label>
                             <Form.Control
                                 type="file"
-                                accept="image/*"
+                                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                             />
                             <Form.Text className="text-muted">
-                                Choose a photo from your device (optional). We will host it for you.
+                                Choose a JPG or PNG photo (optional). We will host it for you.
                             </Form.Text>
                             {imageFile && (
                                 <div className="mt-1 text-success small" aria-live="polite">
@@ -437,7 +467,7 @@ export default function ListView() {
                                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                             />
                             <Form.Text className="text-muted">
-                                Paste a link instead if you do not want to upload a file.
+                                Paste a JPG or PNG link if you do not want to upload a file.
                             </Form.Text>
                         </Form.Group>
 
