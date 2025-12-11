@@ -6,6 +6,7 @@ import ListCard from "../components/ListCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useLists } from "../hooks/useLists";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 
 export default function Home() {
   const heroImage = "https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=1400&q=80";
@@ -29,11 +30,27 @@ export default function Home() {
       return;
     }
 
+    // Fetch username from profile
+    let creatorName = user.email;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.username) {
+        creatorName = profile.username;
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    }
+
     const { error } = await createList({
       title: newListTitle,
       description: newListDescription,
       creator_id: user.id,
-      creator_name: user.user_metadata?.name || user.email,
+      creator_name: creatorName,
     });
 
     if (error) {
@@ -96,7 +113,7 @@ export default function Home() {
           </div>
 
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h1 className="mb-0">Discover Restaurant Lists</h1>
+            <h2 className="mb-0">Discover Restaurant Lists</h2>
             <Button
             variant="primary"
             onClick={() => user ? setShowCreateModal(true) : navigate("/login")}

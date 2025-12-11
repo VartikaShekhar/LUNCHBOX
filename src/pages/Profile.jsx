@@ -221,8 +221,15 @@ export default function Profile() {
           <Card.Body>
             <Row>
               <Col md={8}>
-                <Card.Title as="h2">{user.user_metadata?.name || "User"}</Card.Title>
-                <Card.Text className="text-muted">{user.email}</Card.Text>
+                <Card.Title as="h1">{profile?.username || user.email}</Card.Title>
+                {profile?.name && (
+                  <Card.Text className="text-muted">
+                    <strong>Full Name:</strong> {profile.name}
+                  </Card.Text>
+                )}
+                <Card.Text className="text-muted">
+                  <strong>Email:</strong> {user.email}
+                </Card.Text>
                 <Card.Text className="text-muted">
                   Member since {new Date(user.created_at).toLocaleDateString()}
                 </Card.Text>
@@ -258,7 +265,7 @@ export default function Profile() {
         {/* Username Settings */}
         <Card className="shadow-sm mb-4">
           <Card.Body>
-            <Card.Title as="h3">Username</Card.Title>
+            <Card.Title as="h2">Username</Card.Title>
             <Card.Text className="text-muted">
               Set a username so friends can find you by username or email.
             </Card.Text>
@@ -293,7 +300,7 @@ export default function Profile() {
 
         {/* User's Lists */}
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h3 className="mb-0">My Lists</h3>
+          <h2 className="mb-0">My Lists</h2>
           <Button
             variant="primary"
             onClick={() => navigate("/")}

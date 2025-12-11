@@ -12,7 +12,7 @@ export default function ListCard({ title, creator, restaurantCount, onClick }) {
   return (
     <Card
       className="shadow-sm mb-3 h-100"
-      style={{ cursor: "pointer", transition: "transform 0.2s" }}
+      style={{ cursor: "pointer", transition: "transform 0.2s", color: "black" }}
       onClick={onClick}
       onKeyPress={handleKeyPress}
       tabIndex={0}
@@ -26,9 +26,19 @@ export default function ListCard({ title, creator, restaurantCount, onClick }) {
         <Card.Text className="text-muted mb-2">
           Created by <strong>{creator}</strong>
         </Card.Text>
-        <Badge bg="info" className="mt-1">
-          {restaurantCount} restaurants
+
+        <Badge
+          bg="none"
+          className="mt-1"
+          style={{
+            fontSize: "0.875rem",
+            backgroundColor: "#E34234",
+            color: "white"
+          }}
+        >
+          {restaurantCount} {restaurantCount === 1 ? 'restaurant' : 'restaurants'}
         </Badge>
+
       </Card.Body>
     </Card>
   );

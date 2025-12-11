@@ -29,6 +29,20 @@ export default function Friends() {
     fetchFriends();
   }, [user, navigate]);
 
+  // Live search effect with debouncing
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      performSearch();
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, searchBy, friends, incoming, outgoing]);
+
   const fetchFriends = async () => {
     setLoading(true);
     setError("");
@@ -108,11 +122,14 @@ export default function Friends() {
     setLoading(false);
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
+  const performSearch = async () => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
     setSearching(true);
     setError("");
-    setSuccess("");
 
     const column = searchBy === "email" ? "email" : "username";
     const { data, error } = await supabase
@@ -125,18 +142,40 @@ export default function Friends() {
       setError(error.message);
       setSearchResults([]);
     } else {
-      const currentFriends = new Set(friends.map((f) => f.friend_id));
+      // Get all friend IDs (both accepted and pending)
+      const allFriendIds = new Set();
+      friends.forEach(f => allFriendIds.add(f.friend_id));
+      incoming.forEach(r => allFriendIds.add(r.requester_id));
+      outgoing.forEach(r => allFriendIds.add(r.addressee_id));
+
       const filtered = (data || []).filter(
-        (profile) => profile.id !== user.id && !currentFriends.has(profile.id)
+        (profile) => profile.id !== user.id && !allFriendIds.has(profile.id)
       );
       setSearchResults(filtered);
     }
     setSearching(false);
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    performSearch();
+  };
+
   const handleAddFriend = async (friendId) => {
     setError("");
     setSuccess("");
+
+    // Check if request already exists (in either direction)
+    const { data: existingRequests } = await supabase
+      .from("friend_requests")
+      .select("*")
+      .or(`and(requester_id.eq.${user.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${user.id})`);
+
+    if (existingRequests && existingRequests.length > 0) {
+      setError("A friend request already exists with this user.");
+      return;
+    }
+
     const { data, error } = await supabase
       .from("friend_requests")
       .insert([{ requester_id: user.id, addressee_id: friendId, status: "pending" }])
@@ -187,9 +226,9 @@ export default function Friends() {
       }}
       style={{ cursor: "pointer" }}
     >
-      <div className="fw-bold">{profile?.name || profile?.username || "User"}</div>
+      <div className="fw-bold">{profile?.username || profile?.email || "User"}</div>
       <div className="text-muted small">
-        {profile?.username ? `@${profile?.username}` : "No username set"} · {profile?.email}
+        {profile?.email}
       </div>
     </div>
   );
@@ -204,7 +243,7 @@ export default function Friends() {
       <Container className="py-4" style={{ maxWidth: "900px" }}>
         <Card className="shadow-sm mb-4">
           <Card.Body>
-            <Card.Title as="h2" className="mb-3">
+            <Card.Title as="h1" className="mb-3">
               Find Friends
             </Card.Title>
             {error && <Alert variant="danger" dismissible onClose={() => setError("")}>{error}</Alert>}
@@ -220,41 +259,62 @@ export default function Friends() {
                 </Col>
                 <Col md={8}>
                   <Form.Label>Enter a username or email</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="e.g., foodie123 or friend@gmail.com"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    required
-                  />
+                  <div className="position-relative">
+                    <Form.Control
+                      type="text"
+                      placeholder="Start typing to search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      aria-label="Search for friends by username or email"
+                    />
+                    {searching && (
+                      <div className="position-absolute end-0 top-50 translate-middle-y me-2">
+                        <span className="spinner-border spinner-border-sm text-primary" role="status" aria-label="Searching">
+                          <span className="visually-hidden">Searching...</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </Col>
               </Row>
               <div className="d-flex justify-content-end gap-2 mt-3">
-                <Button variant="secondary" onClick={() => setSearchResults([])}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSearchResults([]);
+                  }}
+                  disabled={!searchTerm}
+                >
                   Clear
-                </Button>
-                <Button type="submit" variant="primary" disabled={searching}>
-                  {searching ? "Searching..." : "Search"}
                 </Button>
               </div>
             </Form>
           </Card.Body>
         </Card>
 
-        {searchResults.length > 0 && (
+        {(searchResults.length > 0 || (searchTerm && !searching)) && (
           <Card className="shadow-sm mb-4">
             <Card.Body>
-              <Card.Title as="h4">Results</Card.Title>
-              <ListGroup variant="flush">
-                {searchResults.map((profile) => (
-                  <ListGroup.Item key={profile.id} className="d-flex justify-content-between align-items-center">
-                    <ProfileDisplay profile={profile} />
-                    <Button size="sm" onClick={() => handleAddFriend(profile.id)}>
-                      Add Friend
-                    </Button>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
+              <Card.Title as="h2">
+                Results {searchResults.length > 0 && `(${searchResults.length})`}
+              </Card.Title>
+              {searchResults.length === 0 ? (
+                <Alert variant="info">
+                  No users found matching "{searchTerm}". Try a different search term.
+                </Alert>
+              ) : (
+                <ListGroup variant="flush">
+                  {searchResults.map((profile) => (
+                    <ListGroup.Item key={profile.id} className="d-flex justify-content-between align-items-center">
+                      <ProfileDisplay profile={profile} />
+                      <Button size="sm" onClick={() => handleAddFriend(profile.id)}>
+                        Add Friend
+                      </Button>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
             </Card.Body>
           </Card>
         )}
@@ -262,7 +322,7 @@ export default function Friends() {
         {/* Incoming Requests */}
         <Card className="shadow-sm mb-4">
           <Card.Body>
-            <Card.Title as="h3">Incoming Requests</Card.Title>
+            <Card.Title as="h2">Incoming Requests</Card.Title>
             {loading ? (
               <p className="text-muted mb-0">Loading...</p>
             ) : incoming.length === 0 ? (
@@ -290,7 +350,7 @@ export default function Friends() {
         {/* Outgoing Requests */}
         <Card className="shadow-sm mb-4">
           <Card.Body>
-            <Card.Title as="h3">Outgoing Requests</Card.Title>
+            <Card.Title as="h2">Outgoing Requests</Card.Title>
             {loading ? (
               <p className="text-muted mb-0">Loading...</p>
             ) : outgoing.length === 0 ? (
@@ -312,7 +372,7 @@ export default function Friends() {
 
         <Card className="shadow-sm">
           <Card.Body>
-            <Card.Title as="h3">Your Friends</Card.Title>
+            <Card.Title as="h2">Your Friends</Card.Title>
             {loading ? (
               <p className="text-muted mb-0">Loading friends...</p>
             ) : friends.length === 0 ? (
@@ -341,8 +401,10 @@ export default function Friends() {
         <Modal.Body>
           {selectedProfile ? (
             <>
-              <p className="mb-1"><strong>Name:</strong> {selectedProfile.name || "User"}</p>
-              <p className="mb-1"><strong>Username:</strong> {selectedProfile.username ? `@${selectedProfile.username}` : "Not set"}</p>
+              <p className="mb-1"><strong>Username:</strong> {selectedProfile.username || "Not set"}</p>
+              {selectedProfile.name && (
+                <p className="mb-1"><strong>Full Name:</strong> {selectedProfile.name}</p>
+              )}
               <p className="mb-0"><strong>Email:</strong> {selectedProfile.email}</p>
             </>
           ) : (

@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Image } from "react-bootstrap";
+import { Card, Image, Button } from "react-bootstrap";
 import Tag from "./Tag";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=1500&q=80";
@@ -13,7 +13,7 @@ const normalizeTags = (tags) => {
 };
 
 export default function RestaurantDetailPanel({ restaurant, onTagClick }) {
-    const { name, rating, tags = [], address, hours, description, image, imageAlt, image_alt } = restaurant;
+    const { name, rating, tags = [], address, hours, description, image, imageAlt, image_alt, website, maps_link } = restaurant;
     const altText = imageAlt || image_alt;
     const normalizedTags = normalizeTags(tags);
     const imageSrc = image || FALLBACK_IMAGE;
@@ -61,6 +61,35 @@ export default function RestaurantDetailPanel({ restaurant, onTagClick }) {
                         <strong>🕒 Hours: </strong>
                         {hours}
                     </Card.Text>
+                )}
+
+                {(website || maps_link) && (
+                    <div className="mb-3 d-flex gap-2 flex-wrap">
+                        {website && (
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                href={website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`Visit ${name} website`}
+                            >
+                                🌐 Website
+                            </Button>
+                        )}
+                        {maps_link && (
+                            <Button
+                                variant="outline-success"
+                                size="sm"
+                                href={maps_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`View ${name} on Google Maps`}
+                            >
+                                📍 View on Maps
+                            </Button>
+                        )}
+                    </div>
                 )}
 
                 {description && (

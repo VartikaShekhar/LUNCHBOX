@@ -45,19 +45,37 @@ export default function NavigationBar() {
           <Nav className="me-auto ms-4">
             <Nav.Link
               onClick={() => navigate("/")}
-              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+              style={{
+                color: "#000000",
+                fontSize: "18px",
+                marginRight: "1rem",
+                fontWeight: "600",
+                textShadow: "none"
+              }}
             >
               Home
             </Nav.Link>
             <Nav.Link
               onClick={() => navigate("/about")}
-              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+              style={{
+                color: "#000000",
+                fontSize: "18px",
+                marginRight: "1rem",
+                fontWeight: "600",
+                textShadow: "none"
+              }}
             >
               About
             </Nav.Link>
             <Nav.Link
               onClick={() => navigate("/friends")}
-              style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+              style={{
+                color: "#000000",
+                fontSize: "18px",
+                marginRight: "1rem",
+                fontWeight: "600",
+                textShadow: "none"
+              }}
             >
               Friends
             </Nav.Link>
@@ -69,7 +87,7 @@ export default function NavigationBar() {
               <>
                 <Nav.Link
                   onClick={() => navigate("/profile")}
-                  style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+                  style={{ color: "black", fontSize: "18px", marginRight: "1rem" }}
                 >
                   Profile
                 </Nav.Link>
@@ -85,7 +103,7 @@ export default function NavigationBar() {
             ) : (
               <Nav.Link
                 onClick={() => navigate("/login")}
-                style={{ color: "white", fontSize: "18px", marginRight: "1rem" }}
+                style={{ color: "black", fontSize: "18px", marginRight: "1rem" }}
               >
                 Login/Signup
               </Nav.Link>

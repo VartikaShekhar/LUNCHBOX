@@ -18,8 +18,12 @@ export const useLists = () => {
 
       const listRows = data || [];
       const listIds = listRows.map((l) => l.id).filter(Boolean);
-      let counts = {};
+      const creatorIds = [...new Set(listRows.map((l) => l.creator_id).filter(Boolean))];
 
+      let counts = {};
+      let profiles = {};
+
+      // Fetch restaurant counts
       if (listIds.length) {
         const { data: restaurantRows, error: restaurantError } = await supabase
           .from('restaurants')
@@ -34,9 +38,25 @@ export const useLists = () => {
         }
       }
 
+      // Fetch usernames from profiles
+      if (creatorIds.length) {
+        const { data: profileRows, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', creatorIds);
+
+        if (!profileError && profileRows) {
+          profiles = profileRows.reduce((acc, profile) => {
+            acc[profile.id] = profile.username;
+            return acc;
+          }, {});
+        }
+      }
+
       const hydratedLists = listRows.map((list) => ({
         ...list,
         restaurant_count: counts[list.id] || 0,
+        creator_name: profiles[list.creator_id] || list.creator_name || 'Anonymous',
       }));
 
       setLists(hydratedLists);

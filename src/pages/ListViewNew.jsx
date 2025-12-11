@@ -30,13 +30,32 @@ export default function ListView() {
         rating: "",
         tags: "",
         image: "",
-        image_alt: ""
+        image_alt: "",
+        website: "",
+        maps_link: ""
     });
     const [imageFile, setImageFile] = useState(null);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [addError, setAddError] = useState("");
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingRestaurant, setEditingRestaurant] = useState(null);
+    const [editFormData, setEditFormData] = useState({
+        name: "",
+        description: "",
+        address: "",
+        hours: "",
+        rating: "",
+        tags: "",
+        image: "",
+        image_alt: "",
+        website: "",
+        maps_link: ""
+    });
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [uploadingEditImage, setUploadingEditImage] = useState(false);
+    const [editError, setEditError] = useState("");
 
-    const { restaurants, loading, error, createRestaurant, deleteRestaurant, refetch } = useRestaurants(listId);
+    const { restaurants, loading, error, createRestaurant, updateRestaurant, deleteRestaurant, refetch } = useRestaurants(listId);
     const { user } = useAuth();
 
     // Fetch list info
@@ -48,7 +67,21 @@ export default function ListView() {
                 .eq('id', listId)
                 .single();
 
-            if (data) setListInfo(data);
+            if (data) {
+                // Fetch username from profile
+                if (data.creator_id) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('username')
+                        .eq('id', data.creator_id)
+                        .single();
+
+                    if (profile?.username) {
+                        data.creator_name = profile.username;
+                    }
+                }
+                setListInfo(data);
+            }
             setLoadingList(false);
         };
         fetchListInfo();
@@ -74,7 +107,7 @@ export default function ListView() {
 
         const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
 
-        let imageUrl = formData.image?.trim();
+        let imageUrl = null;
         const imageAltText = formData.image_alt.trim();
 
         if (imageFile) {
@@ -84,6 +117,12 @@ export default function ListView() {
                 setAddError("Please upload a JPG or PNG image.");
                 return;
             }
+
+            if (!imageAltText) {
+                setAddError("Please add an image description (alt text) for accessibility.");
+                return;
+            }
+
             try {
                 setUploadingImage(true);
                 const { data: uploaded, error: uploadError } = await uploadImageFile(
@@ -105,21 +144,6 @@ export default function ListView() {
             }
         }
 
-        if (!imageFile && imageUrl) {
-            const lowerUrl = imageUrl.toLowerCase();
-            const allowedExtensions = [".jpg", ".jpeg", ".png"];
-            const isAllowedUrl = allowedExtensions.some((ext) => lowerUrl.endsWith(ext));
-            if (!isAllowedUrl) {
-                setAddError("Image URL must be a JPG or PNG.");
-                return;
-            }
-        }
-
-        if ((imageFile || imageUrl) && !imageAltText) {
-            setAddError("Please add an image description (alt text) for accessibility.");
-            return;
-        }
-
         const { error } = await createRestaurant({
             name: formData.name,
             description: formData.description,
@@ -129,6 +153,8 @@ export default function ListView() {
             tags: tagsArray,
             image: imageUrl || null,
             image_alt: imageAltText || null,
+            website: formData.website?.trim() || null,
+            maps_link: formData.maps_link?.trim() || null,
             list_id: listId,
             created_by: user.id
         });
@@ -145,7 +171,9 @@ export default function ListView() {
                 rating: "",
                 tags: "",
                 image: "",
-                image_alt: ""
+                image_alt: "",
+                website: "",
+                maps_link: ""
             });
             setImageFile(null);
             refetch();
@@ -162,6 +190,98 @@ export default function ListView() {
             params.delete("tag");
         }
         setSearchParams(params);
+    };
+
+    const handleEditRestaurant = (restaurant) => {
+        setEditingRestaurant(restaurant);
+        setEditFormData({
+            name: restaurant.name || "",
+            description: restaurant.description || "",
+            address: restaurant.address || "",
+            hours: restaurant.hours || "",
+            rating: restaurant.rating || "",
+            tags: Array.isArray(restaurant.tags) ? restaurant.tags.join(", ") : "",
+            image: restaurant.image || "",
+            image_alt: restaurant.image_alt || "",
+            website: restaurant.website || "",
+            maps_link: restaurant.maps_link || ""
+        });
+        setEditImageFile(null);
+        setEditError("");
+        setShowEditModal(true);
+    };
+
+    const handleUpdateRestaurant = async (e) => {
+        e.preventDefault();
+        setEditError("");
+
+        if (!user || !isOwner) {
+            setEditError("Only the list owner can edit restaurants.");
+            return;
+        }
+
+        const tagsArray = editFormData.tags.split(',').map(t => t.trim()).filter(t => t);
+
+        let imageUrl = editFormData.image?.trim() || null;
+        const imageAltText = editFormData.image_alt.trim();
+
+        if (editImageFile) {
+            const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+            const ext = editImageFile.name?.split(".").pop()?.toLowerCase();
+            if (!allowedTypes.includes(editImageFile.type) && !["jpg", "jpeg", "png"].includes(ext)) {
+                setEditError("Please upload a JPG or PNG image.");
+                return;
+            }
+
+            if (!imageAltText) {
+                setEditError("Please add an image description (alt text) for accessibility.");
+                return;
+            }
+
+            try {
+                setUploadingEditImage(true);
+                const { data: uploaded, error: uploadError } = await uploadImageFile(
+                    editImageFile,
+                    { pathPrefix: user ? `user-${user.id}` : "" }
+                );
+
+                if (uploadError || !uploaded?.publicUrl) {
+                    throw new Error(uploadError || "Could not get uploaded image URL");
+                }
+
+                imageUrl = uploaded.publicUrl;
+            } catch (uploadErr) {
+                setEditError(`Image upload failed: ${uploadErr.message || uploadErr}`);
+                setUploadingEditImage(false);
+                return;
+            } finally {
+                setUploadingEditImage(false);
+            }
+        } else if (imageUrl && !imageAltText) {
+            setEditError("Please add an image description (alt text) for accessibility.");
+            return;
+        }
+
+        const { error } = await updateRestaurant(editingRestaurant.id, {
+            name: editFormData.name,
+            description: editFormData.description,
+            address: editFormData.address,
+            hours: editFormData.hours,
+            rating: editFormData.rating ? parseFloat(editFormData.rating) : null,
+            tags: tagsArray,
+            image: imageUrl || null,
+            image_alt: imageAltText || null,
+            website: editFormData.website?.trim() || null,
+            maps_link: editFormData.maps_link?.trim() || null
+        });
+
+        if (error) {
+            setEditError(error);
+        } else {
+            setShowEditModal(false);
+            setEditingRestaurant(null);
+            refetch();
+        }
     };
 
     const handleDeleteRestaurant = async (id) => {
@@ -340,18 +460,31 @@ export default function ListView() {
                                 onClick={() => navigate(`/restaurants/${restaurant.id}`)}
                                 onTagClick={handleTagClick}
                             />
-                            {user && user.id === restaurant.created_by && (
-                                <Button
-                                    variant="danger"
-                                    size="sm"
-                                    className="position-absolute top-0 end-0 m-2"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteRestaurant(restaurant.id);
-                                    }}
-                                >
-                                    Delete
-                                </Button>
+                            {isOwner && (
+                                <div className="position-absolute top-0 end-0 m-2 d-flex gap-2">
+                                    <Button
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditRestaurant(restaurant);
+                                        }}
+                                        aria-label={`Edit ${restaurant.name}`}
+                                    >
+                                        Edit
+                                    </Button>
+                                    <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteRestaurant(restaurant.id);
+                                        }}
+                                        aria-label={`Delete ${restaurant.name}`}
+                                    >
+                                        Delete
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     ))
@@ -441,6 +574,37 @@ export default function ListView() {
                             </Col>
                         </Row>
 
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="restaurantWebsite">
+                                    <Form.Label>Website (optional)</Form.Label>
+                                    <Form.Control
+                                        type="url"
+                                        placeholder="https://restaurant-website.com"
+                                        value={formData.website}
+                                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                                    />
+                                    <Form.Text className="text-muted">
+                                        Link to the restaurant's website
+                                    </Form.Text>
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="restaurantMapsLink">
+                                    <Form.Label>Google Maps Link (optional)</Form.Label>
+                                    <Form.Control
+                                        type="url"
+                                        placeholder="https://maps.google.com/..."
+                                        value={formData.maps_link}
+                                        onChange={(e) => setFormData({ ...formData, maps_link: e.target.value })}
+                                    />
+                                    <Form.Text className="text-muted">
+                                        Link to Google Maps location
+                                    </Form.Text>
+                                </Form.Group>
+                            </Col>
+                        </Row>
+
                         <Form.Group className="mb-3" controlId="restaurantImageFile">
                             <Form.Label>Upload Image</Form.Label>
                             <Form.Control
@@ -458,19 +622,6 @@ export default function ListView() {
                             )}
                         </Form.Group>
 
-                        <Form.Group className="mb-3" controlId="restaurantImage">
-                            <Form.Label>Image URL</Form.Label>
-                            <Form.Control
-                                type="url"
-                                placeholder="https://example.com/image.jpg"
-                                value={formData.image}
-                                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                            />
-                            <Form.Text className="text-muted">
-                                Paste a JPG or PNG link if you do not want to upload a file.
-                            </Form.Text>
-                        </Form.Group>
-
                         <Form.Group className="mb-3" controlId="restaurantImageAlt">
                             <Form.Label>Image Description (for accessibility)</Form.Label>
                             <Form.Control
@@ -480,7 +631,7 @@ export default function ListView() {
                                 onChange={(e) => setFormData({ ...formData, image_alt: e.target.value })}
                             />
                             <Form.Text className="text-muted">
-                                Required if you upload or link an image; helps screen readers.
+                                Required if you upload an image; helps screen readers.
                             </Form.Text>
                         </Form.Group>
 
@@ -490,6 +641,162 @@ export default function ListView() {
                             </Button>
                             <Button variant="primary" type="submit" disabled={uploadingImage}>
                                 {uploadingImage ? "Uploading image..." : "Add Restaurant"}
+                            </Button>
+                        </div>
+                    </Form>
+                </Modal.Body>
+            </Modal>
+
+            {/* Edit Restaurant Modal */}
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title>Edit Restaurant</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {editError && <Alert variant="danger">{editError}</Alert>}
+                    <Form onSubmit={handleUpdateRestaurant}>
+                        <Form.Group className="mb-3" controlId="editRestaurantName">
+                            <Form.Label>Restaurant Name *</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="e.g., Mickies Dairy Bar"
+                                value={editFormData.name}
+                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                required
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3" controlId="editRestaurantDescription">
+                            <Form.Label>Description</Form.Label>
+                            <Form.Control
+                                as="textarea"
+                                rows={2}
+                                placeholder="Describe the restaurant..."
+                                value={editFormData.description}
+                                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                            />
+                        </Form.Group>
+
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="editRestaurantAddress">
+                                    <Form.Label>Address</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="123 Main St, Madison, WI"
+                                        value={editFormData.address}
+                                        onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="editRestaurantHours">
+                                    <Form.Label>Hours</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="9:00 AM - 5:00 PM"
+                                        value={editFormData.hours}
+                                        onChange={(e) => setEditFormData({ ...editFormData, hours: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="editRestaurantRating">
+                                    <Form.Label>Rating (0-5)</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="5"
+                                        placeholder="4.5"
+                                        value={editFormData.rating}
+                                        onChange={(e) => setEditFormData({ ...editFormData, rating: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="editRestaurantTags">
+                                    <Form.Label>Tags (comma-separated)</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="Brunch, American, Casual"
+                                        value={editFormData.tags}
+                                        onChange={(e) => setEditFormData({ ...editFormData, tags: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="editRestaurantWebsite">
+                                    <Form.Label>Website (optional)</Form.Label>
+                                    <Form.Control
+                                        type="url"
+                                        placeholder="https://restaurant-website.com"
+                                        value={editFormData.website}
+                                        onChange={(e) => setEditFormData({ ...editFormData, website: e.target.value })}
+                                    />
+                                    <Form.Text className="text-muted">
+                                        Link to the restaurant's website
+                                    </Form.Text>
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3" controlId="editRestaurantMapsLink">
+                                    <Form.Label>Google Maps Link (optional)</Form.Label>
+                                    <Form.Control
+                                        type="url"
+                                        placeholder="https://maps.google.com/..."
+                                        value={editFormData.maps_link}
+                                        onChange={(e) => setEditFormData({ ...editFormData, maps_link: e.target.value })}
+                                    />
+                                    <Form.Text className="text-muted">
+                                        Link to Google Maps location
+                                    </Form.Text>
+                                </Form.Group>
+                            </Col>
+                        </Row>
+
+                        <Form.Group className="mb-3" controlId="editRestaurantImageFile">
+                            <Form.Label>Upload New Image</Form.Label>
+                            <Form.Control
+                                type="file"
+                                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                                onChange={(e) => setEditImageFile(e.target.files?.[0] || null)}
+                            />
+                            <Form.Text className="text-muted">
+                                Choose a JPG or PNG photo (optional). Leave blank to keep current image.
+                            </Form.Text>
+                            {editImageFile && (
+                                <div className="mt-1 text-success small" aria-live="polite">
+                                    Selected: {editImageFile.name}
+                                </div>
+                            )}
+                        </Form.Group>
+
+                        <Form.Group className="mb-3" controlId="editRestaurantImageAlt">
+                            <Form.Label>Image Description (for accessibility)</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Describe the image for screen readers"
+                                value={editFormData.image_alt}
+                                onChange={(e) => setEditFormData({ ...editFormData, image_alt: e.target.value })}
+                            />
+                            <Form.Text className="text-muted">
+                                Required if you have an image; helps screen readers.
+                            </Form.Text>
+                        </Form.Group>
+
+                        <div className="d-flex justify-content-end gap-2">
+                            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" type="submit" disabled={uploadingEditImage}>
+                                {uploadingEditImage ? "Uploading image..." : "Update Restaurant"}
                             </Button>
                         </div>
                     </Form>
