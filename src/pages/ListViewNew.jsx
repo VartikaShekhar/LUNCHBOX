@@ -28,11 +28,8 @@ export default function ListView() {
         address: "",
         hours: "",
         rating: "",
-        tags: "",
         image: "",
-        image_alt: "",
-        website: "",
-        maps_link: ""
+        image_alt: ""
     });
     const [imageFile, setImageFile] = useState(null);
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -45,11 +42,8 @@ export default function ListView() {
         address: "",
         hours: "",
         rating: "",
-        tags: "",
         image: "",
-        image_alt: "",
-        website: "",
-        maps_link: ""
+        image_alt: ""
     });
     const [editImageFile, setEditImageFile] = useState(null);
     const [uploadingEditImage, setUploadingEditImage] = useState(false);
@@ -105,8 +99,6 @@ export default function ListView() {
             return;
         }
 
-        const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
-
         let imageUrl = null;
         const imageAltText = formData.image_alt.trim();
 
@@ -150,11 +142,11 @@ export default function ListView() {
             address: formData.address,
             hours: formData.hours,
             rating: formData.rating ? parseFloat(formData.rating) : null,
-            tags: tagsArray,
+            tags: [],
             image: imageUrl || null,
             image_alt: imageAltText || null,
-            website: formData.website?.trim() || null,
-            maps_link: formData.maps_link?.trim() || null,
+            website: null,
+            maps_link: null,
             list_id: listId,
             created_by: user.id
         });
@@ -169,11 +161,8 @@ export default function ListView() {
                 address: "",
                 hours: "",
                 rating: "",
-                tags: "",
                 image: "",
-                image_alt: "",
-                website: "",
-                maps_link: ""
+                image_alt: ""
             });
             setImageFile(null);
             refetch();
@@ -200,11 +189,8 @@ export default function ListView() {
             address: restaurant.address || "",
             hours: restaurant.hours || "",
             rating: restaurant.rating || "",
-            tags: Array.isArray(restaurant.tags) ? restaurant.tags.join(", ") : "",
             image: restaurant.image || "",
-            image_alt: restaurant.image_alt || "",
-            website: restaurant.website || "",
-            maps_link: restaurant.maps_link || ""
+            image_alt: restaurant.image_alt || ""
         });
         setEditImageFile(null);
         setEditError("");
@@ -219,8 +205,6 @@ export default function ListView() {
             setEditError("Only the list owner can edit restaurants.");
             return;
         }
-
-        const tagsArray = editFormData.tags.split(',').map(t => t.trim()).filter(t => t);
 
         let imageUrl = editFormData.image?.trim() || null;
         const imageAltText = editFormData.image_alt.trim();
@@ -268,11 +252,11 @@ export default function ListView() {
             address: editFormData.address,
             hours: editFormData.hours,
             rating: editFormData.rating ? parseFloat(editFormData.rating) : null,
-            tags: tagsArray,
+            tags: [],
             image: imageUrl || null,
             image_alt: imageAltText || null,
-            website: editFormData.website?.trim() || null,
-            maps_link: editFormData.maps_link?.trim() || null
+            website: null,
+            maps_link: null
         });
 
         if (error) {
@@ -546,64 +530,18 @@ export default function ListView() {
                             </Col>
                         </Row>
 
-                        <Row>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="restaurantRating">
-                                    <Form.Label>Rating (0-5)</Form.Label>
-                                    <Form.Control
-                                        type="number"
-                                        step="0.1"
-                                        min="0"
-                                        max="5"
-                                        placeholder="4.5"
-                                        value={formData.rating}
-                                        onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                                    />
-                                </Form.Group>
-                            </Col>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="restaurantTags">
-                                    <Form.Label>Tags (comma-separated)</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        placeholder="Brunch, American, Casual"
-                                        value={formData.tags}
-                                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                                    />
-                                </Form.Group>
-                            </Col>
-                        </Row>
-
-                        <Row>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="restaurantWebsite">
-                                    <Form.Label>Website (optional)</Form.Label>
-                                    <Form.Control
-                                        type="url"
-                                        placeholder="https://restaurant-website.com"
-                                        value={formData.website}
-                                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                                    />
-                                    <Form.Text className="text-muted">
-                                        Link to the restaurant's website
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="restaurantMapsLink">
-                                    <Form.Label>Google Maps Link (optional)</Form.Label>
-                                    <Form.Control
-                                        type="url"
-                                        placeholder="https://maps.google.com/..."
-                                        value={formData.maps_link}
-                                        onChange={(e) => setFormData({ ...formData, maps_link: e.target.value })}
-                                    />
-                                    <Form.Text className="text-muted">
-                                        Link to Google Maps location
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
-                        </Row>
+                        <Form.Group className="mb-3" controlId="restaurantRating">
+                            <Form.Label>Rating (0-5)</Form.Label>
+                            <Form.Control
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="5"
+                                placeholder="4.5"
+                                value={formData.rating}
+                                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                            />
+                        </Form.Group>
 
                         <Form.Group className="mb-3" controlId="restaurantImageFile">
                             <Form.Label>Upload Image</Form.Label>
@@ -702,64 +640,18 @@ export default function ListView() {
                             </Col>
                         </Row>
 
-                        <Row>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="editRestaurantRating">
-                                    <Form.Label>Rating (0-5)</Form.Label>
-                                    <Form.Control
-                                        type="number"
-                                        step="0.1"
-                                        min="0"
-                                        max="5"
-                                        placeholder="4.5"
-                                        value={editFormData.rating}
-                                        onChange={(e) => setEditFormData({ ...editFormData, rating: e.target.value })}
-                                    />
-                                </Form.Group>
-                            </Col>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="editRestaurantTags">
-                                    <Form.Label>Tags (comma-separated)</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        placeholder="Brunch, American, Casual"
-                                        value={editFormData.tags}
-                                        onChange={(e) => setEditFormData({ ...editFormData, tags: e.target.value })}
-                                    />
-                                </Form.Group>
-                            </Col>
-                        </Row>
-
-                        <Row>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="editRestaurantWebsite">
-                                    <Form.Label>Website (optional)</Form.Label>
-                                    <Form.Control
-                                        type="url"
-                                        placeholder="https://restaurant-website.com"
-                                        value={editFormData.website}
-                                        onChange={(e) => setEditFormData({ ...editFormData, website: e.target.value })}
-                                    />
-                                    <Form.Text className="text-muted">
-                                        Link to the restaurant's website
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
-                            <Col md={6}>
-                                <Form.Group className="mb-3" controlId="editRestaurantMapsLink">
-                                    <Form.Label>Google Maps Link (optional)</Form.Label>
-                                    <Form.Control
-                                        type="url"
-                                        placeholder="https://maps.google.com/..."
-                                        value={editFormData.maps_link}
-                                        onChange={(e) => setEditFormData({ ...editFormData, maps_link: e.target.value })}
-                                    />
-                                    <Form.Text className="text-muted">
-                                        Link to Google Maps location
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
-                        </Row>
+                        <Form.Group className="mb-3" controlId="editRestaurantRating">
+                            <Form.Label>Rating (0-5)</Form.Label>
+                            <Form.Control
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="5"
+                                placeholder="4.5"
+                                value={editFormData.rating}
+                                onChange={(e) => setEditFormData({ ...editFormData, rating: e.target.value })}
+                            />
+                        </Form.Group>
 
                         <Form.Group className="mb-3" controlId="editRestaurantImageFile">
                             <Form.Label>Upload New Image</Form.Label>
