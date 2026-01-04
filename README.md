@@ -33,12 +33,13 @@ https://cs571-f25.github.io/p21/
    git clone https://github.com/VartikaShekhar/LUNCHBOX.git
     ```
    
-      ```bash
+   ```bash
    cd LUNCHBOX
-       ```
-         ```bash
+   ```
+   ```bash
    npm install
-       ```
-         ```bash
+   ```
+   ```bash
    npm start
    ```
+      
