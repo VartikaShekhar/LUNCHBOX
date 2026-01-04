@@ -6,7 +6,7 @@ It allows users to create, share, and explore curated restaurant lists while int
 🔗 **Live Website:**  
 https://cs571-f25.github.io/p21/
 
----
+
 
 ## Features
 
@@ -16,7 +16,7 @@ https://cs571-f25.github.io/p21/
 - Add friends and view their lists  
 - Explore public lists based on different themes  
 
----
+
 
 ## Tech Stack
 
@@ -24,7 +24,7 @@ https://cs571-f25.github.io/p21/
 - **Backend / Database:** Supabase 
 - **Hosting:** GitHub Pages  
 
----
+
 
 ## Getting Started (Local Setup)
 
