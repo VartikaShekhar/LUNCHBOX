@@ -10,7 +10,7 @@ https://cs571-f25.github.io/p21/
 
 ## Features
 
-- User authentication using Supabase  
+- User authentication  
 - Create and share themed restaurant lists  
 - Rate restaurants and leave comments  
 - Add friends and view their lists  
@@ -31,7 +31,14 @@ https://cs571-f25.github.io/p21/
 1. Clone the repository:
    ```bash
    git clone https://github.com/VartikaShekhar/LUNCHBOX.git
+    ```
+   
+      ```bash
    cd LUNCHBOX
+       ```
+         ```bash
    npm install
+       ```
+         ```bash
    npm start
    ```
